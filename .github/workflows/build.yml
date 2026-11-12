@@ -104,7 +104,7 @@ jobs:
       - name: Build on Ubuntu 22.04 and test packages
         run: |
           docker build -f packaging/linux/Dockerfile.build -t kmswitcher-build .
-          docker run --rm -i --user "$(id -u):$(id -g)" -e HOME=/tmp \
+          docker run --rm -i --user "$(id -u):$(id -g)" -e HOME=/tmp -e USER="$(id -un)" \
             -e PRODUCT -e APP_DIRECTORY -e KMS_GITHUB_RELEASE_TAG \
             -e GITHUB_REF -e GITHUB_EVENT_NAME -e GITHUB_RUN_NUMBER \
             -v "$PWD:/src" kmswitcher-build bash -se <<'BUILD'
