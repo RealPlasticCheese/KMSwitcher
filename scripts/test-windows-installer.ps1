@@ -11,6 +11,12 @@ $uninstallKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\{A507
 if ($Product -eq 'setup') { $uninstallKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\{81988AF7-DB48-43CC-A44E-E5BD20185213}_is1' }
 if (Test-Path -LiteralPath $uninstallKey) { throw 'A real installation exists in this account; use a clean test account.' }
 New-Item -ItemType Directory -Force -Path $testRoot | Out-Null
+$publisher = 'Frank Tzanabetis'
+$website = 'https://plasticcheese.com/'
+$installerPublisher = (Get-Item -LiteralPath $Installer).VersionInfo.CompanyName
+if ($installerPublisher.Trim() -ne $publisher) {
+    throw 'Installer publisher metadata is missing.'
+}
 $originalLocalData = $env:LOCALAPPDATA
 $runKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run'
 $originalStartup = (Get-ItemProperty -Path $runKey -ErrorAction SilentlyContinue).KMSwitcher
@@ -44,6 +50,10 @@ try {
         }
         $process = Start-Process -FilePath (Resolve-Path -LiteralPath $Installer).Path -ArgumentList @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/SP-', '/TASKS=', "/DIR=`"$target`"", "/LOG=`"$logDirectory\install-$pass.log`"") -WindowStyle Hidden -Wait -PassThru
         if ($process.ExitCode -ne 0) { throw "Installer pass $pass failed." }
+        $registered = Get-ItemProperty -LiteralPath $uninstallKey
+        if ($registered.Publisher -ne $publisher -or $registered.URLInfoAbout -ne $website) {
+            throw 'Installed publisher name or website is missing.'
+        }
         if ($runningGui -and -not $runningGui.WaitForExit(10000)) { throw 'Upgrade left the old Companion running.' }
         if ((Get-Content -LiteralPath $preferences -Raw) -ne $marker) { throw 'Installation changed local preferences.' }
         & python (Join-Path $PSScriptRoot 'test-packaged.py') $target

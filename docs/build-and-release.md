@@ -1,6 +1,8 @@
 # Build KMSwitcher
 
-The public repository starts with source. Build and release automation will be migrated separately.
+GitHub Actions builds and tests Windows and Linux installers, firmware bundles,
+and the standalone Engineering Console. Its KMSwitcher CI check requires every
+build and test job to pass.
 
 ## Firmware on Windows
 
@@ -53,5 +55,18 @@ See [testing](testing.md) for local checks.
 Before distributing generated installers or firmware, review the actual bundled dependency licenses and notices.
 Source license information is in [LICENSE](../LICENSE) and [third-party notices](../THIRD-PARTY-NOTICES.md).
 
-Azure-specific pipeline files remain as generic templates while automation migration is pending.
-Self-hosted pools, project settings and signing credentials must be configured by the operator.
+## Publish a GitHub release
+
+Run the Build and test workflow on main with a release tag such as v0.2.0.
+
+~~~powershell
+gh workflow run build.yml --ref main -f release_tag=v0.2.0
+~~~
+
+A blank release tag runs validation without publishing. The workflow uses the
+component versions in versions/, verifies every asset against its build
+manifest, and publishes the verified draft on [GitHub Releases](https://github.com/RealPlasticCheese/KMSwitcher/releases).
+Each release includes SHA256SUMS.txt and the index used by Firmware Setup and the
+Stress Toolkit. Windows packages are built without signing credentials.
+
+The Azure pipeline templates are retained for reference.

@@ -1,0 +1,321 @@
+name: Build and test
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Leave blank to validate, or enter vMAJOR.MINOR.PATCH to publish from main
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}-${{ inputs.release_tag || 'validation' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  KMS_GITHUB_RELEASE_TAG: ${{ inputs.release_tag || '' }}
+  PYTHONUTF8: '1'
+  QT_QPA_PLATFORM: offscreen
+
+jobs:
+  windows:
+    name: Windows (${{ matrix.product }})
+    runs-on: windows-2022
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - product: companion
+            app: kmswitcher
+          - product: setup
+            app: kmswitcher-setup
+    env:
+      PRODUCT: ${{ matrix.product }}
+      APP_DIRECTORY: ${{ matrix.app }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: packaging/requirements-windows.lock
+      - name: Generate build identity
+        run: python scripts/release-version.py --component $env:PRODUCT
+      - name: Install locked Python dependencies
+        run: python scripts/install-build-dependencies.py
+      - name: Build native companion protocol tests
+        if: matrix.product == 'companion'
+        run: python scripts/test-desktop.py
+      - name: Run application unit tests
+        run: python scripts/ci-tests.py $env:PRODUCT
+      - name: Verify installer compiler
+        run: ./scripts/package-windows.ps1 -Product $env:PRODUCT -PrepareOnly
+      - name: Freeze and smoke-test application
+        run: |
+          python scripts/build-companion.py --product $env:PRODUCT
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python scripts/test-packaged.py "build/release/app/$env:APP_DIRECTORY"
+      - name: Build and test installer
+        run: |
+          ./scripts/package-windows.ps1 -Product $env:PRODUCT
+          $installer = Get-ChildItem -LiteralPath build/release/installers -Filter '*-setup.exe'
+          if (@($installer).Count -ne 1) { throw 'Expected exactly one installer.' }
+          ./scripts/test-windows-installer.ps1 -Installer $installer.FullName -Product $env:PRODUCT
+          python scripts/component-artifact.py build/release/installers
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: windows-${{ matrix.product }}
+          path: build/release/installers/
+          if-no-files-found: error
+
+  linux:
+    name: Linux (${{ matrix.product }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - product: companion
+            app: kmswitcher
+          - product: setup
+            app: kmswitcher-setup
+          - product: stress
+            app: kmswitcher-stress
+    env:
+      PRODUCT: ${{ matrix.product }}
+      APP_DIRECTORY: ${{ matrix.app }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Build on Ubuntu 22.04 and test packages
+        run: |
+          docker build -f packaging/linux/Dockerfile.build -t kmswitcher-build .
+          docker run --rm -i --user "$(id -u):$(id -g)" -e HOME=/tmp -e USER="$(id -un)" \
+            -e PRODUCT -e APP_DIRECTORY -e KMS_GITHUB_RELEASE_TAG \
+            -e GITHUB_REF -e GITHUB_EVENT_NAME -e GITHUB_RUN_NUMBER \
+            -v "$PWD:/src" kmswitcher-build bash -se <<'BUILD'
+          set -euo pipefail
+          python scripts/release-version.py --component "$PRODUCT"
+          if [[ "$PRODUCT" == companion ]]; then
+            python scripts/test-desktop.py
+          fi
+          python scripts/ci-tests.py "$PRODUCT"
+          python scripts/build-companion.py --product "$PRODUCT"
+          app="build/release/app/$APP_DIRECTORY"
+          python scripts/test-packaged.py "$app"
+          packages=build/release/installers
+          if [[ "$PRODUCT" == companion ]]; then
+            python scripts/package-linux.py --app "$app" --output "$packages"
+          else
+            python scripts/package-tools.py --product "$PRODUCT" --app "$app" \
+              --identity build/release/version.json --output "$packages"
+          fi
+          for package in "$packages"/*.deb; do
+            test "$(dpkg-deb -f "$package" Maintainer)" = 'Frank Tzanabetis'
+            test "$(dpkg-deb -f "$package" Homepage)" = 'https://plasticcheese.com/'
+          done
+          for package in "$packages"/*.rpm; do
+            test "$(rpm -qp --qf '%{PACKAGER}' "$package")" = 'Frank Tzanabetis'
+            test "$(rpm -qp --qf '%{URL}' "$package")" = 'https://plasticcheese.com/'
+          done
+          python scripts/component-artifact.py "$packages"
+          if [[ "$PRODUCT" == setup ]]; then
+            sed -n '/^esptool==/{p;n;p;}' packaging/requirements-linux.lock > build/esptool-source.lock
+            python -m pip download --no-deps --no-binary esptool --no-build-isolation \
+              --require-hashes -r build/esptool-source.lock -d build/release/esptool-source
+            python scripts/component-artifact.py build/release/esptool-source
+          fi
+          BUILD
+      - name: Test DEB and portable installation
+        run: |
+          docker run --rm -e PRODUCT -v "$PWD:/src:ro" -w /src ubuntu:22.04 sh -ec '
+            apt-get update -qq
+            DEBIAN_FRONTEND=noninteractive apt-get install -y python3 xvfb xauth
+            if [ "$PRODUCT" = companion ]; then
+              xvfb-run -a sh scripts/test-linux-installer.sh deb /src/build/release/installers
+            else
+              xvfb-run -a sh scripts/test-tools-installer.sh deb /src/build/release/installers "$PRODUCT"
+            fi
+          '
+      - name: Test RPM and portable installation
+        run: |
+          docker run --rm -e PRODUCT -v "$PWD:/src:ro" -w /src fedora:43 sh -ec '
+            dnf install -y python3 xorg-x11-server-Xvfb xorg-x11-xauth
+            if [ "$PRODUCT" = companion ]; then
+              xvfb-run -a sh scripts/test-linux-installer.sh rpm /src/build/release/installers
+            else
+              xvfb-run -a sh scripts/test-tools-installer.sh rpm /src/build/release/installers "$PRODUCT"
+            fi
+          '
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: linux-${{ matrix.product }}
+          path: build/release/installers/
+          if-no-files-found: error
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        if: matrix.product == 'setup'
+        with:
+          name: esptool-source
+          path: build/release/esptool-source/
+          if-no-files-found: error
+
+  firmware:
+    name: Firmware and native tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: packaging/requirements-linux.lock
+      - name: Generate build identity
+        run: python scripts/release-version.py --component firmware
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y build-essential flex bison gperf cmake ninja-build libusb-1.0-0 libffi-dev libssl-dev \
+            libegl1 libopengl0 libxkbcommon-x11-0 libxcb-cursor0
+          python scripts/install-build-dependencies.py
+      - name: Run native tests
+        run: python scripts/ci-tests.py native
+      - name: Build firmware and run SDK tests
+        run: |
+          test_python=$(command -v python)
+          source scripts/setup-toolchain.sh
+          python scripts/idf.py --project controller --release
+          "$test_python" scripts/ci-tests.py sdk
+          python scripts/test-memory.py --elf-only \
+            --receiver-elf build/production/receiver/kmswitcher_receiver.elf \
+            --controller-elf build/production/controller/kmswitcher_controller.elf
+          python scripts/idf.py --project hid-generator
+          "$test_python" scripts/package-firmware.py --build build/production
+          find build/release/firmware -type f \
+            \( -name project_description.json -o -name size.txt -o -name size.json \) -delete
+          "$test_python" scripts/firmware-notices.py build/release/firmware
+          "$test_python" scripts/package-test-firmware.py
+          "$test_python" scripts/component-artifact.py build/release/firmware --firmware
+          "$test_python" scripts/component-artifact.py build/release/stress-firmware --stress-firmware
+          "$test_python" scripts/test-release-bundles.py
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: firmware
+          path: |
+            build/release/firmware/*.zip
+            build/release/firmware/release-index.json
+            build/release/firmware/component.json
+          if-no-files-found: error
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: stress-firmware
+          path: |
+            build/release/stress-firmware/*.zip
+            build/release/stress-firmware/release-index.json
+            build/release/stress-firmware/component.json
+          if-no-files-found: error
+
+  web:
+    name: Engineering Console
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24.15.0'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Generate build identity
+        run: python3 scripts/release-version.py --component web
+      - name: Test and build standalone HTML
+        working-directory: web
+        run: |
+          npm ci
+          npm test
+          npm run build
+      - name: Record console checksum
+        run: python3 scripts/component-artifact.py web/dist
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: web
+          path: web/dist/
+          if-no-files-found: error
+
+  required:
+    name: KMSwitcher CI
+    runs-on: ubuntu-24.04
+    needs: [windows, linux, firmware, web]
+    if: always()
+    steps:
+      - name: Verify every build and test succeeded
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: test "$RESULTS" = 'success success success success'
+
+  publish:
+    name: Publish GitHub release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    needs: required
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.release_tag != ''
+    permissions:
+      actions: read
+      contents: write
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          path: build/release-input
+      - name: Validate release inputs and assemble downloads
+        run: |
+          python3 scripts/github-release.py build/release-input build/github-release \
+            --commit "$GITHUB_SHA" --repo "$GITHUB_REPOSITORY" --tag "$KMS_GITHUB_RELEASE_TAG"
+      - name: Upload draft assets and publish
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          main=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha)
+          if [[ "$main" != "$GITHUB_SHA" ]]; then
+            echo 'Main advanced during the build. Run the release workflow again on the current main.'
+            exit 1
+          fi
+          existing=$(git ls-remote --tags origin "refs/tags/$KMS_GITHUB_RELEASE_TAG")
+          if [[ -n "$existing" ]]; then
+            echo 'The release tag already exists.'
+            exit 1
+          fi
+          cat > build/github-release-notes.md <<'NOTES'
+          Download the installers and the separate firmware bundle for your product.
+          The Engineering Console is a standalone HTML file.
+          Use SHA256SUMS.txt to verify downloads.
+
+          The Windows installers are unsigned. See the installation guide for setup.
+          KMSwitcher is developed by [Frank Tzanabetis](https://plasticcheese.com/).
+          NOTES
+          gh release create "$KMS_GITHUB_RELEASE_TAG" build/github-release/* \
+            --target "$GITHUB_SHA" --title "KMSwitcher $KMS_GITHUB_RELEASE_TAG" \
+            --notes-file build/github-release-notes.md --draft
+          gh release edit "$KMS_GITHUB_RELEASE_TAG" --draft=false --latest

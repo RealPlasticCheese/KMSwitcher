@@ -131,8 +131,8 @@ def launch(product="regular", bundle=None, *, execute=True, parent=None, initial
             self.button(self.sources, "Check for updates", self.check_updates)
             self.release_list = QListWidget(); self.sources.addWidget(self.release_list)
             self.button(self.sources, "Download selected firmware", self.download_selected)
-            self.button(self.sources, "Open private Azure releases in browser", self.private_releases)
-            self.label(self.sources, "Private DevOps access stays private. Sign in in your browser, download the firmware ZIP from a release, then use Import firmware ZIP. No access token is stored in this application.")
+            browser_label = "Open private Azure releases" if isinstance(self.source, dict) else "Open GitHub releases"
+            self.button(self.sources, browser_label, self.open_releases)
             self.button(self.sources, "Import downloaded firmware ZIP…", self.import_archive)
             self.sources.addStretch()
             self.progress = QProgressBar(); self.progress.setRange(0, 1); box.addWidget(self.progress)
@@ -536,7 +536,7 @@ def launch(product="regular", bundle=None, *, execute=True, parent=None, initial
         def found_releases(self, rows):
             self.downloads = rows; self.release_list.clear()
             for row in rows: self.release_list.addItem(f"{row['version']} · {'stable' if row.get('stable') else 'development'} · {row['commit'][:12]}")
-            self.log.appendPlainText(f"Found {len(rows)} releases. Private Azure projects may require the browser download option.")
+            self.log.appendPlainText(f"Found {len(rows)} releases.")
 
         def download_selected(self):
             index = self.release_list.currentRow()
@@ -544,10 +544,10 @@ def launch(product="regular", bundle=None, *, execute=True, parent=None, initial
             row = self.downloads[index]
             self.background(lambda: releases.download(row, product), self.adopt_bundle)
 
-        def private_releases(self):
+        def open_releases(self):
             if self.source and isinstance(self.source, dict):
                 webbrowser.open(self.source["azure"] + "/_build?definitionId=" + str(self.source["definition"]))
-            else: self.failure("This local build has no Azure release address. Use the published release or a public feed URL.")
+            else: webbrowser.open(releases.PUBLIC_RELEASES)
 
         def open_console(self, *, configure=False):
             if not self.busy:
