@@ -1,0 +1,23 @@
+{
+  "source": "Synthetic regression fixture",
+  "boot": "37ef0fa9",
+  "lines": [
+    "E (100) USBH: EP Alloc error: ESP_ERR_NO_MEM",
+    "I (101) usb-input: c52b standby",
+    "E (110) USB HOST: EP allocation error ESP_ERR_NO_MEM",
+    "E (110) USB HOST: EP allocation error ESP_ERR_NO_MEM",
+    "E (110) USB HOST: EP allocation error ESP_ERR_NO_MEM",
+    "E (110) USB HOST: EP allocation error ESP_ERR_NO_MEM",
+    "E (110) USB HOST: EP allocation error ESP_ERR_NO_MEM",
+    "E (110) USB HOST: EP allocation error ESP_ERR_NO_MEM",
+    "E (110) USB HOST: EP allocation error ESP_ERR_NO_MEM",
+    "E (110) USB HOST: EP allocation error ESP_ERR_NO_MEM",
+    "E (110) USB HOST: EP allocation error ESP_ERR_NO_MEM",
+    "E (110) USB HOST: EP allocation error ESP_ERR_NO_MEM",
+    "E (110) USB HOST: EP allocation error ESP_ERR_NO_MEM",
+    "E (110) USB HOST: EP allocation error ESP_ERR_NO_MEM",
+    "E (110) USB HOST: EP allocation error ESP_ERR_NO_MEM",
+    "E (110) USB HOST: EP allocation error ESP_ERR_NO_MEM",
+    "E (110) USB HOST: EP allocation error ESP_ERR_NO_MEM"
+  ]
+}

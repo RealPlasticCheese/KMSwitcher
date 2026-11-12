@@ -1,0 +1,5 @@
+{
+  "idf.buildPath": "${workspaceFolder}/../../build/receiver",
+  "idf.customExtraVars": {"IDF_TARGET": "esp32s2", "PYTHONUTF8": "1"},
+  "C_Cpp.default.compileCommands": "${workspaceFolder}/../../build/receiver/compile_commands.json"
+}

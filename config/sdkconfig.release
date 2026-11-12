@@ -1,0 +1,3 @@
+# Retain the existing recovery/test controls. Test mode still requires explicit activation.
+# In particular, a retained test-mode pause must remain recoverable after an upgrade.
+CONFIG_KMS_TEST_SUPPORT=y

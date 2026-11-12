@@ -1,0 +1,272 @@
+parameters:
+- name: runWindowsOnAzure
+  type: boolean
+  default: false
+- name: runLinuxOnAzure
+  displayName: 'Run Linux jobs on Azure instead of the self-hosted runner'
+  type: boolean
+  default: false
+- name: component
+  type: string
+- name: appDirectory
+  type: string
+- name: packageCommand
+  type: string
+- name: installerCommand
+  type: string
+- name: signWindows
+  type: boolean
+  default: false
+- name: signingCertificate
+  type: string
+  default: signing-certificate.pfx
+stages:
+- stage: Validate
+  jobs:
+  - ${{ if ne(parameters.component, 'stress') }}:
+    - job: Windows
+      pool:
+        ${{ if parameters.runWindowsOnAzure }}:
+          vmImage: windows-2022
+        ${{ else }}:
+          name: SelfHosted-Windows
+          demands:
+          - Agent.OS -equals Windows_NT
+      ${{ if not(parameters.runWindowsOnAzure) }}:
+        workspace:
+          clean: resources
+      steps:
+      - template: identity.yml
+        parameters:
+          component: ${{ parameters.component }}
+      - template: python.yml
+        parameters:
+          platform: windows
+          python: '3.12'
+          selfHosted: ${{ not(parameters.runWindowsOnAzure) }}
+      - script: python scripts/ci-preflight.py --component ${{ parameters.component }} --phase python
+        displayName: Check Python, Qt and native compiler before tests
+      - ${{ if eq(parameters.component, 'companion') }}:
+        - script: python scripts/test-desktop.py
+          displayName: Build and exercise native protocol integration library
+      - script: python scripts/ci-tests.py ${{ parameters.component }}
+        displayName: Run component tests
+      - template: results.yml
+        parameters:
+          name: windows
+  - job: Linux
+    pool:
+      ${{ if eq(parameters.runLinuxOnAzure, true) }}:
+        vmImage: ubuntu-22.04
+      ${{ else }}:
+        name: SelfHosted-Linux
+        demands:
+        - Agent.OS -equals Linux
+    steps:
+    - template: identity.yml
+      parameters:
+        component: ${{ parameters.component }}
+    - template: python.yml
+      parameters:
+        platform: linux
+        python: '3.10'
+        selfHosted: ${{ not(parameters.runLinuxOnAzure) }}
+    - bash: |-
+        set -euo pipefail
+        sudo apt-get update -qq
+        sudo apt-get install -y python3-tk libegl1 libopengl0 libxcb-cursor0 libxkbcommon-x11-0
+      displayName: Install headless UI test libraries
+      condition: and(succeeded(), ${{ parameters.runLinuxOnAzure }})
+    - script: python scripts/ci-preflight.py --component ${{ parameters.component }} --phase python
+      displayName: Check Python, Qt and native compiler before tests
+    - script: python scripts/ci-tests.py ${{ parameters.component }}
+      displayName: Run component tests
+    - template: results.yml
+      parameters:
+        name: linux
+- stage: Package
+  dependsOn: Validate
+  condition: succeeded()
+  jobs:
+  - ${{ if ne(parameters.component, 'stress') }}:
+    - job: Windows
+      pool:
+        ${{ if parameters.runWindowsOnAzure }}:
+          vmImage: windows-2022
+        ${{ else }}:
+          name: SelfHosted-Windows
+          demands:
+          - Agent.OS -equals Windows_NT
+      ${{ if not(parameters.runWindowsOnAzure) }}:
+        workspace:
+          clean: resources
+      steps:
+      - template: identity.yml
+        parameters:
+          component: ${{ parameters.component }}
+      - script: python scripts/ci-preflight.py --component ${{ parameters.component }} --phase package
+        displayName: Check packaging configuration before freezing
+        env:
+          KMS_FIRMWARE_PIPELINE_ID: $(KMS_FIRMWARE_PIPELINE_ID)
+      - template: python.yml
+        parameters:
+          platform: windows
+          python: '3.12'
+          selfHosted: ${{ not(parameters.runWindowsOnAzure) }}
+      - script: python scripts/ci-preflight.py --component ${{ parameters.component }} --phase python
+        displayName: Check Python, Qt and native compiler before freezing
+      - ${{ if eq(parameters.signWindows, true) }}:
+        - task: DownloadSecureFile@1
+          name: signingPfx
+          inputs:
+            secureFile: ${{ parameters.signingCertificate }}
+      - pwsh: ./scripts/package-windows.ps1 -Product ${{ parameters.component }} -PrepareOnly
+        displayName: Prepare and verify installer and signing tools before freezing
+        ${{ if eq(parameters.signWindows, true) }}:
+          env:
+            KMS_SIGNING_PFX: $(signingPfx.secureFilePath)
+            KMS_SIGNING_PASSWORD: $(windowsSigningPassword)
+      - script: python scripts/build-companion.py --product ${{ parameters.component }}
+        displayName: Freeze and smoke-test independent application
+        env:
+          KMS_FIRMWARE_PIPELINE_ID: $(KMS_FIRMWARE_PIPELINE_ID)
+      - script: python scripts/test-packaged.py build/release/app/${{ parameters.appDirectory }}
+        displayName: Freeze and smoke-test independent application
+        env:
+          KMS_FIRMWARE_PIPELINE_ID: $(KMS_FIRMWARE_PIPELINE_ID)
+      - pwsh: |-
+          ./scripts/package-windows.ps1 -Product ${{ parameters.component }}
+          if ($LASTEXITCODE -ne 0) { throw "Packaging failed" }
+          $installer = Get-ChildItem build/release/installers/*-setup.exe | Select-Object -First 1
+          try {
+            ./scripts/test-windows-installer.ps1 -Installer $installer.FullName -Product ${{ parameters.component }}
+          } finally {
+            if (Test-Path -LiteralPath build/installer-logs -PathType Container) {
+              Write-Host "##vso[task.setvariable variable=installerLogsAvailable]true"
+            }
+          }
+        displayName: Package and test installer lifecycle
+        ${{ if eq(parameters.signWindows, true) }}:
+          env:
+            KMS_SIGNING_PFX: $(signingPfx.secureFilePath)
+            KMS_SIGNING_PASSWORD: $(windowsSigningPassword)
+      - script: python scripts/component-artifact.py build/release/installers
+      - publish: build/release/installers
+        artifact: windows-${{ parameters.component }}
+      - publish: build/installer-logs
+        artifact: windows-installer-logs
+        condition: and(always(), eq(variables['installerLogsAvailable'], 'true'))
+  - job: Linux
+    variables:
+      linuxBuildImage: ubuntu:22.04
+    pool:
+      ${{ if eq(parameters.runLinuxOnAzure, true) }}:
+        vmImage: ubuntu-22.04
+      ${{ else }}:
+        name: SelfHosted-Linux
+        demands:
+        - Agent.OS -equals Linux
+    steps:
+    - template: identity.yml
+      parameters:
+        component: ${{ parameters.component }}
+    - script: python scripts/ci-preflight.py --component ${{ parameters.component }} --phase package
+      displayName: Check Docker and packaging configuration before container setup
+      env:
+        KMS_FIRMWARE_PIPELINE_ID: $(KMS_FIRMWARE_PIPELINE_ID)
+    - ${{ if eq(parameters.runLinuxOnAzure, false) }}:
+      - bash: python3 scripts/agent/prepare-build-image.py
+        displayName: Reuse Ubuntu 22.04 packaging image and installed dependencies
+    - task: Cache@2
+      condition: and(succeeded(), ${{ parameters.runLinuxOnAzure }})
+      inputs:
+        key: pip-container-v3 | linux | packaging/requirements-linux.lock
+        path: $(Pipeline.Workspace)/pip-container-cache
+    - bash: |
+        set -euo pipefail
+        python scripts/ci-preflight.py --component ${{ parameters.component }} --phase cache --cache "$(Pipeline.Workspace)/pip-container-cache"
+        docker run --rm --cpus=2 --memory=6g -i -e PYTHONDONTWRITEBYTECODE=1 -e KMS_FIRMWARE_PIPELINE_ID -e SYSTEM_COLLECTIONURI -e SYSTEM_TEAMPROJECTID -e KMS_CACHE_OWNER="$(id -u):$(id -g)" -v "$PWD:/src" -v "$(Pipeline.Workspace)/pip-container-cache:/pip-cache" -w /src "$(linuxBuildImage)" bash -se <<'BUILD'
+         set -euo pipefail
+         # Pip creates private root-owned cache files. Restore agent ownership
+         # even on failure so Cache@2 can archive them in its post-job step.
+         trap 'chown -R "$KMS_CACHE_OWNER" /pip-cache /src/build' EXIT
+         # Pip refuses to use another user's cache when running as root.
+         chown -R 0:0 /pip-cache
+         export DEBIAN_FRONTEND=noninteractive QT_QPA_PLATFORM=offscreen PIP_CACHE_DIR=/pip-cache
+         if [ -x /opt/kms-build-venv/bin/python ]; then
+          export PATH=/opt/kms-build-venv/bin:$PATH
+         else
+          apt-get update -qq
+          apt-get install -y python3 python3-venv python3-dev python3-tk build-essential libffi-dev libssl-dev binutils rpm dpkg-dev
+          apt-get install -y $(python3 scripts/package-linux.py --print-build-dependencies)
+          python3 -m venv /tmp/kms-build
+          export PATH=/tmp/kms-build/bin:$PATH
+          python -m pip cache dir
+          python scripts/install-build-dependencies.py
+         fi
+         python scripts/ci-preflight.py --component ${{ parameters.component }} --phase python
+         command -v dpkg-deb
+         command -v rpmbuild
+         python scripts/build-companion.py --product ${{ parameters.component }}
+         python scripts/test-packaged.py build/release/app/${{ parameters.appDirectory }}
+         ${{ parameters.packageCommand }}
+         python scripts/component-artifact.py build/release/installers
+        BUILD
+        python scripts/ci-preflight.py --component ${{ parameters.component }} --phase cache --cache "$(Pipeline.Workspace)/pip-container-cache"
+      displayName: Build on Ubuntu 22.04 and package application
+      env:
+        KMS_FIRMWARE_PIPELINE_ID: $(KMS_FIRMWARE_PIPELINE_ID)
+    - publish: build/release/installers
+      artifact: linux-${{ parameters.component }}
+  - job: LinuxInstallers
+    dependsOn: Linux
+    pool:
+      ${{ if eq(parameters.runLinuxOnAzure, true) }}:
+        vmImage: ubuntu-22.04
+      ${{ else }}:
+        name: SelfHosted-Linux
+        demands:
+        - Agent.OS -equals Linux
+    strategy:
+      matrix:
+        Ubuntu2204:
+          image: ubuntu:22.04
+          format: deb
+        Ubuntu2404:
+          image: ubuntu:24.04
+          format: deb
+        Debian12:
+          image: debian:12
+          format: deb
+        Fedora43:
+          image: fedora:43
+          format: rpm
+    steps:
+    - checkout: self
+    # Download into the per-job temporary directory so a persistent agent cannot
+    # mix installers from previous runs into the package-manager commands.
+    - task: DownloadPipelineArtifact@2
+      inputs:
+        artifactName: linux-${{ parameters.component }}
+        targetPath: $(Agent.TempDirectory)/linux-${{ parameters.component }}
+    - bash: "set -euo pipefail\ndocker run --rm --cpus=2 --memory=6g -v \"$PWD:/src:ro\" -v \"$(Agent.TempDirectory)/linux-${{ parameters.component\
+        \ }}:/packages:ro\" -w /src \"$(image)\" sh -ec '\n if command -v apt-get >/dev/null; then apt-get update -qq; DEBIAN_FRONTEND=noninteractive\
+        \ apt-get install -y python3 xvfb; else dnf install -y python3 xorg-x11-server-Xvfb; fi\n Xvfb :99 -screen 0 1280x800x24\
+        \ -nolisten tcp >/tmp/xvfb.log 2>&1 &\n export DISPLAY=:99\n sleep 1\n ${{ parameters.installerCommand }}\n' "
+- stage: Retain
+  dependsOn: Package
+  condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/tags/'))
+  jobs:
+  - job: Artifacts
+    pool:
+      ${{ if eq(parameters.runLinuxOnAzure, true) }}:
+        vmImage: ubuntu-22.04
+      ${{ else }}:
+        name: SelfHosted-Linux
+        demands:
+        - Agent.OS -equals Linux
+    steps:
+    - checkout: self
+    - bash: python3 scripts/publish-release.py --retain
+      env:
+        SYSTEM_ACCESSTOKEN: $(System.AccessToken)

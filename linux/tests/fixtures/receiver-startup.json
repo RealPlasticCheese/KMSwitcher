@@ -1,0 +1,245 @@
+{
+  "source": "Synthetic regression fixture",
+  "cases": [
+    {
+      "segment": 1,
+      "reported_status": "FAIL",
+      "run": 1,
+      "generators": {
+        "1": {
+          "completed": 5
+        }
+      },
+      "observed_faults": [
+        {
+          "event": "acknowledgement timeout",
+          "line": "W (100) diagnostics: Slot 1: acknowledgement timeout (detail=0, idle=0ms)"
+        }
+      ],
+      "keyboard_checkpoints": {
+        "expected": [
+          1,
+          1234
+        ],
+        "master": [
+          1,
+          1234
+        ],
+        "receiver": [
+          1,
+          1234
+        ]
+      },
+      "traces": {
+        "master": {
+          "run": 1,
+          "overwritten": 0,
+          "records": [],
+          "summary": {
+            "raw": 1
+          }
+        }
+      }
+    },
+    {
+      "segment": 2,
+      "reported_status": "PASS",
+      "run": 2,
+      "generators": {
+        "1": {
+          "completed": 5
+        }
+      },
+      "observed_faults": [
+        {
+          "event": "acknowledgement timeout",
+          "line": "W (100) diagnostics: Slot 1: acknowledgement timeout (detail=0, idle=0ms)"
+        }
+      ],
+      "keyboard_checkpoints": {
+        "expected": [
+          1,
+          1234
+        ],
+        "master": [
+          1,
+          1234
+        ],
+        "receiver": [
+          1,
+          1234
+        ]
+      },
+      "traces": {
+        "master": {
+          "run": 2,
+          "overwritten": 0,
+          "records": [],
+          "summary": {
+            "raw": 1
+          }
+        }
+      }
+    },
+    {
+      "segment": 3,
+      "reported_status": "PASS",
+      "run": 3,
+      "generators": {
+        "1": {
+          "completed": 5
+        }
+      },
+      "observed_faults": [
+        {
+          "event": "acknowledgement timeout",
+          "line": "W (100) diagnostics: Slot 1: acknowledgement timeout (detail=0, idle=0ms)"
+        }
+      ],
+      "keyboard_checkpoints": {
+        "expected": [
+          1,
+          1234
+        ],
+        "master": [
+          1,
+          1234
+        ],
+        "receiver": [
+          1,
+          1234
+        ]
+      },
+      "traces": {
+        "master": {
+          "run": 3,
+          "overwritten": 0,
+          "records": [],
+          "summary": {
+            "raw": 1
+          }
+        }
+      }
+    },
+    {
+      "segment": 4,
+      "reported_status": "FAIL",
+      "run": 4,
+      "generators": {
+        "1": {
+          "completed": 5
+        }
+      },
+      "observed_faults": [
+        {
+          "event": "acknowledgement timeout",
+          "line": "W (100) diagnostics: Slot 1: acknowledgement timeout (detail=0, idle=0ms)"
+        }
+      ],
+      "keyboard_checkpoints": {
+        "expected": [
+          1,
+          1234
+        ],
+        "master": [
+          1,
+          1234
+        ],
+        "receiver": [
+          1,
+          1234
+        ]
+      },
+      "traces": {
+        "master": {
+          "run": 4,
+          "overwritten": 0,
+          "records": [],
+          "summary": {
+            "raw": 1
+          }
+        }
+      }
+    },
+    {
+      "segment": 5,
+      "reported_status": "PASS",
+      "run": 5,
+      "generators": {
+        "1": {
+          "completed": 5
+        }
+      },
+      "observed_faults": [
+        {
+          "event": "acknowledgement timeout",
+          "line": "W (100) diagnostics: Slot 1: acknowledgement timeout (detail=0, idle=0ms)"
+        }
+      ],
+      "keyboard_checkpoints": {
+        "expected": [
+          1,
+          1234
+        ],
+        "master": [
+          1,
+          1234
+        ],
+        "receiver": [
+          1,
+          1234
+        ]
+      },
+      "traces": {
+        "master": {
+          "run": 5,
+          "overwritten": 0,
+          "records": [],
+          "summary": {
+            "raw": 1
+          }
+        }
+      }
+    },
+    {
+      "segment": 6,
+      "reported_status": "FAIL",
+      "run": 6,
+      "generators": {
+        "1": {
+          "completed": 5
+        }
+      },
+      "observed_faults": [
+        {
+          "event": "acknowledgement timeout",
+          "line": "W (100) diagnostics: Slot 1: acknowledgement timeout (detail=0, idle=0ms)"
+        }
+      ],
+      "keyboard_checkpoints": {
+        "expected": [
+          1,
+          1234
+        ],
+        "master": [
+          1,
+          1234
+        ],
+        "receiver": [
+          1,
+          1234
+        ]
+      },
+      "traces": {
+        "master": {
+          "run": 6,
+          "overwritten": 0,
+          "records": [],
+          "summary": {
+            "raw": 1
+          }
+        }
+      }
+    }
+  ]
+}

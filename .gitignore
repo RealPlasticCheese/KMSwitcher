@@ -1,0 +1,51 @@
+# Local toolchains and generated firmware builds
+.tools/
+build/
+**/build/
+**/sdkconfig
+**/sdkconfig.old
+**/managed_components/
+/web/dist/
+/linux/dist/
+
+# Local Git worktrees
+.worktrees/
+
+# IDE caches and per-user settings
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Runtime logs, captures, and local diagnostics
+/logs/
+*.log
+
+# Python caches and virtual environments
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+*.egg-info/
+
+# JavaScript dependencies
+node_modules/
+.npm-cache/
+.npm/
+.cache/
+coverage/
+
+# Operating-system metadata and temporary editor files
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.swp
+*.swo
+*~

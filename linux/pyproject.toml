@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kmswitcher-stress"
+version = "0.3.1"
+description = "Configurable KMSwitcher hardware test controller"
+requires-python = ">=3.10"
+authors = [{name = "Frank Tzanabetis"}]
+license = "MIT"
+license-files = ["LICENSE"]
+dependencies = ["pyserial>=3.5,<4", "pyudev>=0.24,<1; sys_platform == 'linux'", "evdev>=1.6,<2; sys_platform == 'linux'"]
+
+[project.urls]
+Homepage = "https://plasticcheese.com"
+Repository = "https://github.com/RealPlasticCheese/KMSwitcher"
+
+[project.scripts]
+kms-stress = "kms_stress.__main__:main"
+kms-run-ledger = "kms_stress.run_ledger:main"
+
+[tool.setuptools.packages.find]
+include = ["kms_stress*"]
+
+[tool.setuptools.package-data]
+kms_stress = ["web_assets/*", "build-info.json"]

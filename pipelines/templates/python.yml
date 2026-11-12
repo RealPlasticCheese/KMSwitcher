@@ -1,0 +1,37 @@
+parameters:
+- name: platform
+  type: string
+- name: python
+  type: string
+- name: selfHosted
+  type: boolean
+  default: false
+steps:
+- ${{ if eq(parameters.selfHosted, false) }}:
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: ${{ parameters.python }}
+      architecture: x64
+  - task: Cache@2
+    inputs:
+      key: pip | "$(Agent.OS)" | packaging/requirements-${{ parameters.platform }}.lock
+      path: $(Pipeline.Workspace)/pip-cache
+- ${{ if and(parameters.selfHosted, eq(parameters.platform, 'windows')) }}:
+  - pwsh: |
+      $pythonVersion = python -c "import struct, sys; print('.'.join(map(str, sys.version_info[:2])), struct.calcsize('P') * 8)"
+      if ($LASTEXITCODE -ne 0 -or $pythonVersion -ne '${{ parameters.python }} 64') {
+        throw 'Install 64-bit Python ${{ parameters.python }} and add it to the machine PATH.'
+      }
+      $venv = Join-Path '$(Agent.TempDirectory)' 'kms-python'
+      python -m venv $venv
+      if ($LASTEXITCODE -ne 0) { throw 'Unable to create the build virtual environment.' }
+      Write-Host "##vso[task.prependpath]$(Join-Path $venv 'Scripts')"
+    displayName: Prepare a clean Windows Python environment
+- ${{ if or(not(parameters.selfHosted), eq(parameters.platform, 'windows')) }}:
+  - script: python scripts/install-build-dependencies.py
+    env:
+      PIP_CACHE_DIR: $(Pipeline.Workspace)/pip-cache
+    displayName: Install hash-locked dependencies
+- ${{ if and(parameters.selfHosted, eq(parameters.platform, 'linux')) }}:
+  - bash: python3 scripts/agent/prepare-python.py
+    displayName: Reuse persistent hash-locked Python environment

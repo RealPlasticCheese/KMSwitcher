@@ -1,0 +1,21 @@
+parameters:
+- name: component
+  type: string
+steps:
+- checkout: self
+  fetchDepth: 0
+  fetchTags: true
+  persistCredentials: true
+- script: python scripts/ci-preflight.py --component ${{ parameters.component }}
+  displayName: Check source and host prerequisites
+- script: python scripts/publish-release.py --retention-probe
+  displayName: Check tagged-release retention permission before building
+  condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/tags/'))
+  env:
+    SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+- script: git fetch origin +refs/heads/master:refs/remotes/origin/master
+  condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/tags/'))
+- script: python scripts/release-version.py --component ${{ parameters.component }} --azure
+  displayName: Calculate independent component identity
+- script: python -c "print('##vso[build.addbuildtag]kmswitcher-stable')"
+  condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/tags/'))

@@ -1,0 +1,51 @@
+trigger:
+  batch: true
+  branches:
+    include:
+    - master
+  tags:
+    include:
+    - stress/v*
+  paths:
+    include:
+    - companion/kms_transport/**
+    - linux/**
+    - companion/kms_update/**
+    - tests/python/**
+    - scripts/build-companion.py
+    - scripts/test-packaged.py
+    - scripts/install-build-dependencies.py
+    - packaging/**
+    - docs/installing.md
+    - tests/release/**
+    - scripts/agent/prepare-python.py
+    - scripts/agent/prepare-build-image.py
+    - scripts/ci-preflight.py
+    - scripts/ci-tests.py
+    - scripts/release-version.py
+    - scripts/component-artifact.py
+    - pipelines/components.json
+    - versions/stress.txt
+    - pipelines/stress.yml
+    - pipelines/templates/**
+    - firmware/components/kms_core/include/kms_protocol.h
+    - firmware/components/kms_core/include/kms_management.h
+    - firmware/components/kms_core/include/kms_firmware_cache.h
+    - firmware/components/kms_core/include/kms_cached_update.h
+pr: none
+name: stress-$(Build.BuildId)
+appendCommitMessageToRunName: false
+parameters:
+- name: runLinuxOnAzure
+  displayName: 'Run Linux jobs on Azure instead of the self-hosted runner'
+  type: boolean
+  default: false
+extends:
+  template: templates/application.yml
+  parameters:
+    runLinuxOnAzure: ${{ parameters.runLinuxOnAzure }}
+    component: stress
+    appDirectory: kmswitcher-stress
+    packageCommand: python scripts/package-tools.py --product stress --app build/release/app/kmswitcher-stress --identity
+      build/release/version.json --output build/release/installers
+    installerCommand: sh scripts/test-tools-installer.sh "$(format)" /packages stress

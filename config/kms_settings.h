@@ -1,0 +1,274 @@
+#pragma once
+// Shared firmware settings. Rebuild all boards when changing radio/protocol capacity.
+#define KMS_SLOTS 7
+#define KMS_INPUTS 24
+// Everyday preference defaults; the S3 can override these from its saved preferences.
+#define KMS_DOUBLE_MS 350u
+#define KMS_SELECT_MS 3000u
+#define KMS_CONFIG_MS 10000u
+// KMS_TRIGGER_CTRL / ALT / SHIFT / SCROLL_LOCK / INSERT / PAUSE / NUM_LOCK.
+#define KMS_TRIGGER_DEFAULT KMS_TRIGGER_CTRL
+#define KMS_LEASE_MS 1000u
+#define KMS_RADIO_CHANNEL 6
+#define KMS_RADIO_COUNTRY "AU"
+#define KMS_RADIO_QUEUE_DEPTH 64
+#define KMS_RADIO_RX_DEPTH 32
+// Automatic recovery stays on the selected PC. Input is held in RAM only.
+#define KMS_RECOVERY_BUFFER_DEPTH 256u
+#define KMS_RECOVERY_BUFFER_MS 5000u
+#define KMS_RECOVERY_REPLAY_MS 10u
+// Faults persist promptly; statistics are accumulated in RAM between checkpoints.
+#define KMS_DIAGNOSTICS_ENABLED 1
+#define KMS_DIAGNOSTICS_PERSIST 1
+#define KMS_DIAGNOSTICS_STATS_MS 3600000u
+#define KMS_DIAGNOSTICS_IDLE_MS 5000u
+#define KMS_DIAGNOSTICS_EVENTS 1024u
+#define KMS_DIAGNOSTICS_SNAPSHOTS 72u
+#define KMS_DIAGNOSTICS_QUEUE_DEPTH 16u
+#define KMS_DIAGNOSTICS_SCAN_BATCH 8u
+#define KMS_DIAGNOSTICS_REPEAT_MS 60000u
+// Allow an application ACK's two radio legs before occupying the channel again.
+// The 80 ms ACK budget and 200 ms stale-input limit remain independent.
+#define KMS_RADIO_RETRY_MS 20u
+#define KMS_RADIO_RETRY_WINDOW_MS 80u
+#define KMS_RADIO_MAX_AGE_MS 200u
+// A missing driver completion must not hold the single transmit slot forever.
+#define KMS_RADIO_TX_TIMEOUT_MS 1000u
+#define KMS_RADIO_RECOVERY_ATTEMPTS 3u
+#define KMS_RADIO_RECOVERY_WINDOW_MS 600000u
+#define KMS_STATUS_MS 500u
+#define KMS_SNAPSHOT_MS 200u
+#define KMS_PEER_TIMEOUT_MS 1500u
+#define KMS_PAIR_WINDOW_MS 30000u
+#define KMS_PAIR_RETRY_MS 250u
+#define KMS_PAIR_KEY_DELAY_MS 50u
+#define KMS_PAIR_OFFER_RETRY_MS 1000u
+#define KMS_BUTTON_DEBOUNCE_MS 30u
+#define KMS_BUTTON_HOLD_MS 3000u
+#define KMS_BUTTON_RECOVERY_PRESSES 3u
+#define KMS_BUTTON_MULTI_PRESS_MS 2000u
+#define KMS_BUTTON_SHORT_PRESS_MS 500u
+#define KMS_FACTORY_RESET_WINDOW_MS 10000u
+#define KMS_FACTORY_RESET_HOLD_MS 5000u
+#define KMS_USB_HID_INTERFACES 8
+#define KMS_HID_FIELDS 64
+#define KMS_HID_LED_FIELDS 16
+#define KMS_HID_USAGES 32
+#define KMS_HID_GLOBAL_DEPTH 8
+#define KMS_HID_COLLECTION_DEPTH 16
+#define KMS_REPORT_BYTES 256
+#define KMS_DESCRIPTOR_BYTES 4096
+#define KMS_USB_QUEUE_DEPTH 64
+#define KMS_USB_RAW_QUEUE_DEPTH 8
+#define KMS_USB_EVENT_DEPTH 32
+#define KMS_USB_MAX_AGE_MS 200u
+#define KMS_USB_ALLOC_RETRY_MS 1000u
+#define KMS_USB_TASK_STACK 6144
+#define KMS_USB_TASK_PRIORITY 5
+// Control transactions have deadlines; quiet interrupt-IN endpoints do not.
+#define KMS_USB_CONTROL_TIMEOUT_MS 1000u
+// Independent timer task bounds a USB call even if the input loop cannot tick.
+#define KMS_USB_CALL_TIMEOUT_MS 3000u
+#define KMS_USB_CALL_WATCH_MS 100u
+#define KMS_USB_PROBE_MS 2000u
+#define KMS_USB_PROBE_FAILURES 2u
+#define KMS_USB_RECOVERY_OFF_MS 100u
+#define KMS_USB_RECOVERY_DRAIN_MS 3000u
+#define KMS_USB_RECOVERY_ENUM_MS 8000u
+#define KMS_USB_RECOVERY_ATTEMPTS 3u
+#define KMS_USB_RECOVERY_WINDOW_MS 600000u
+#define KMS_USB_RESTART_LOG_MS 500u
+// Physical keyboard lock LEDs; these do not control the S3 RGB status LED.
+#define KMS_KEYBOARD_LEDS_ENABLED 1
+#define KMS_LED_RADIO_MIN_MS 10u
+#define KMS_LED_USB_RETRY_MS 100u
+#define KMS_LED_USB_ATTEMPTS 3u
+#define KMS_LED_USB_WATCHDOG_MS 250u
+// Reapply to wireless keyboards that wake without USB re-enumeration.
+#define KMS_LED_USB_REFRESH_MS 2000u
+#define KMS_COMMAND_BYTES 512
+// Management uses its own queues and a bounded, low-priority worker.
+#define KMS_MANAGEMENT_QUEUE_DEPTH 4u
+#define KMS_MANAGEMENT_PACE_MS 10u
+#define KMS_MANAGEMENT_RETRY_MS 500u
+#define KMS_MANAGEMENT_ATTEMPTS 8u
+#define KMS_MANAGEMENT_SESSION_MS 120000u
+#define KMS_MANAGEMENT_SUMMARY_MS 5000u
+// Automatic receiver recovery: online/confirmed peers only; no resets for an
+// unplugged/sleeping USB host. Attempts/backoff survive receiver and S3 resets.
+#define KMS_RECOVERY_IDLE_FAILURES 4u
+#define KMS_RECOVERY_ACTIVE_FAILURES 12u
+#define KMS_RECOVERY_IDLE_WINDOW_MS 15000u
+#define KMS_RECOVERY_ACTIVE_WINDOW_MS 30000u
+#define KMS_RECOVERY_IDLE_SPAN_MS 2000u
+#define KMS_RECOVERY_ACTIVE_SPAN_MS 5000u
+#define KMS_RECOVERY_COALESCE_MS 200u
+#define KMS_RECOVERY_QUIET_MS 10000u
+#define KMS_RECOVERY_BACKOFF_MS 60000u
+#define KMS_RECOVERY_BACKOFF_MAX_MS 900000u
+#define KMS_RECOVERY_MAX_ATTEMPTS 3u
+#define KMS_RECOVERY_BUDGET_MS 3600000u
+#define KMS_RECOVERY_HEALTHY_MS 600000u
+#define KMS_RECOVERY_BOOT_WAIT_MS 20000u
+#define KMS_RECOVERY_GRACE_MS 5000u
+#if KMS_RECOVERY_IDLE_FAILURES < 2 || KMS_RECOVERY_ACTIVE_FAILURES <= KMS_RECOVERY_IDLE_FAILURES || KMS_RECOVERY_MAX_ATTEMPTS < 1 || KMS_RECOVERY_MAX_ATTEMPTS > 8
+#error Invalid receiver recovery failure or attempt limits
+#endif
+#if KMS_RECOVERY_IDLE_SPAN_MS >= KMS_RECOVERY_IDLE_WINDOW_MS || KMS_RECOVERY_ACTIVE_SPAN_MS >= KMS_RECOVERY_ACTIVE_WINDOW_MS || KMS_RECOVERY_BACKOFF_MS > KMS_RECOVERY_BACKOFF_MAX_MS || KMS_RECOVERY_BUDGET_MS >= 0x80000000u
+#error Invalid receiver recovery time limits
+#endif
+#define KMS_SLAVE_HISTORY_EVENTS 256u
+#define KMS_SLAVE_HISTORY_STATS 24u
+#define KMS_SLAVE_HISTORY_REPEAT_MS 60000u
+#define KMS_SLAVE_HISTORY_STATS_MS 3600000u
+#define KMS_SLAVE_HISTORY_BYTES 98304u
+// Coalesce event bursts before writing the binary journal to flash.
+#define KMS_SLAVE_HISTORY_SAVE_MS 1000u
+#define KMS_OTA_HEALTH_MS 3000u
+#define KMS_OTA_HEALTH_DEADLINE_MS 30000u
+#define KMS_MAIN_POLL_MS 2
+// Keep routing/ACK handling above management and console workers, below USB.
+#define KMS_APP_TASK_PRIORITY 4
+#define KMS_STATUS_LED_BRIGHTNESS 8
+// Default: RGB off while forwarding normally; saved S3 preferences can override this.
+// Pairing, configuration, recovery, startup and error feedback remain enabled.
+#define KMS_LED_NORMAL_ENABLED 0
+#define KMS_RGB_RESOLUTION_HZ 10000000
+#define KMS_LED_BLINK_MS 250u
+// RGB colour masks, independent of the board's configured wire colour order.
+#define KMS_COLOR_OFF 0
+#define KMS_COLOR_RED 1
+#define KMS_COLOR_GREEN 2
+#define KMS_COLOR_BLUE 4
+#define KMS_COLOR_YELLOW (KMS_COLOR_RED | KMS_COLOR_GREEN)
+#define KMS_COLOR_MAGENTA (KMS_COLOR_RED | KMS_COLOR_BLUE)
+#define KMS_COLOR_CYAN (KMS_COLOR_GREEN | KMS_COLOR_BLUE)
+#define KMS_COLOR_WHITE (KMS_COLOR_RED | KMS_COLOR_GREEN | KMS_COLOR_BLUE)
+#define KMS_LED_SELECTION_COLOR KMS_COLOR_YELLOW
+#define KMS_LED_PAIRING_COLOR KMS_COLOR_BLUE
+#define KMS_LED_FAILURE_COLOR KMS_COLOR_RED
+#define KMS_LED_IDLE_COLOR KMS_COLOR_OFF
+#define KMS_LED_SLOT_COLORS {KMS_COLOR_RED, KMS_COLOR_GREEN, KMS_COLOR_YELLOW, KMS_COLOR_BLUE, KMS_COLOR_MAGENTA, KMS_COLOR_CYAN, KMS_COLOR_WHITE}
+#define KMS_LED_PAIRING_BLINK_MS KMS_LED_BLINK_MS
+#define KMS_LED_SELECTION_BLINK_MS KMS_LED_BLINK_MS
+#define KMS_LED_FAILURE_BLINK_MS (KMS_LED_BLINK_MS / 2u)
+#define KMS_LED_FAILURE_FLASHES 5u
+#define KMS_LED_ERROR_MS (2u * KMS_LED_FAILURE_BLINK_MS * KMS_LED_FAILURE_FLASHES)
+#define KMS_LED_CONFIG_COLOR KMS_COLOR_YELLOW
+#define KMS_LED_CONFIG_BLINK_MS KMS_LED_BLINK_MS
+#define KMS_LED_STARTUP_COLOR KMS_COLOR_WHITE
+#define KMS_LED_STARTUP_MS 500u
+#define KMS_LED_FACTORY_HOLD_COLOR KMS_COLOR_RED
+#define KMS_LED_FACTORY_READY_COLOR KMS_COLOR_RED
+#define KMS_LED_FACTORY_BLINK_MS 150u
+#define KMS_LED_RECOVERY_COLOR KMS_COLOR_BLUE
+#define KMS_LED_RECOVERY_FLASHES 3u
+#define KMS_LED_CONFIG_SAVED_COLOR KMS_COLOR_BLUE
+#define KMS_LED_CONFIG_SAVED_FLASHES 2u
+#define KMS_LED_CONFIG_CANCEL_COLOR KMS_COLOR_YELLOW
+#define KMS_LED_CONFIG_CANCEL_FLASHES 1u
+#define KMS_LED_SAVE_ERROR_FLASHES 3u
+#define KMS_LED_NOTICE_ON_MS 150u
+#define KMS_LED_NOTICE_OFF_MS 150u
+#define KMS_DIAGNOSTIC_STEP_MS 1000u
+#define KMS_DIAGNOSTIC_LOG_MS 5000u
+#define KMS_USB_VID 0x303a
+// Development PID. Allocate your own USB identifiers before distributing hardware.
+#define KMS_USB_PID 0x4005
+#define KMS_USB_MANUFACTURER "KMSwitcher"
+#define KMS_USB_PRODUCT "KMSwitcher Receiver"
+#define KMS_USB_POWER_MA 250
+#define KMS_USB_ENDPOINT_BYTES 64
+#define KMS_USB_ENDPOINT_INTERVAL_MS 1
+
+#if KMS_SLOTS < 1 || KMS_SLOTS > 7
+#error KMSwitcher supports keys 1-7 and at most seven encrypted peers
+#endif
+#if KMS_SLAVE_HISTORY_EVENTS < 1 || KMS_SLAVE_HISTORY_EVENTS > 256 || KMS_SLAVE_HISTORY_STATS < 1 || KMS_SLAVE_HISTORY_STATS > 24 || KMS_SLAVE_HISTORY_BYTES < 4096 || KMS_SLAVE_HISTORY_BYTES > 98304
+#error Invalid slave history capacities
+#endif
+#if KMS_MANAGEMENT_QUEUE_DEPTH < 2 || KMS_MANAGEMENT_PACE_MS < 1 || KMS_MANAGEMENT_RETRY_MS < KMS_MANAGEMENT_PACE_MS || KMS_MANAGEMENT_ATTEMPTS < 1 || KMS_SLAVE_HISTORY_REPEAT_MS < 1 || KMS_SLAVE_HISTORY_STATS_MS < 1000
+#error Invalid management timing or queue settings
+#endif
+#if KMS_MANAGEMENT_SESSION_MS <= KMS_MANAGEMENT_RETRY_MS * KMS_MANAGEMENT_ATTEMPTS || KMS_MANAGEMENT_SESSION_MS >= 0x80000000u || KMS_MANAGEMENT_SUMMARY_MS < KMS_MANAGEMENT_PACE_MS || KMS_SLAVE_HISTORY_REPEAT_MS >= 0x80000000u || KMS_SLAVE_HISTORY_STATS_MS >= 0x80000000u || KMS_OTA_HEALTH_MS >= KMS_OTA_HEALTH_DEADLINE_MS || KMS_OTA_HEALTH_DEADLINE_MS >= KMS_MANAGEMENT_SESSION_MS
+#error Management session or boot-health deadlines are inconsistent
+#endif
+#if KMS_RADIO_CHANNEL < 1 || KMS_RADIO_CHANNEL > 13
+#error Invalid 2.4 GHz channel
+#endif
+#if KMS_SNAPSHOT_MS >= KMS_LEASE_MS
+#error Heartbeat interval must be shorter than the receiver fail-safe lease
+#endif
+#if KMS_RECOVERY_BUFFER_DEPTH < 4 || KMS_RECOVERY_BUFFER_DEPTH > 1024 || KMS_RECOVERY_BUFFER_MS < KMS_RADIO_MAX_AGE_MS || KMS_RECOVERY_BUFFER_MS >= 0x80000000u || KMS_RECOVERY_REPLAY_MS < 1
+#error Invalid recovery buffer capacity or timing
+#endif
+#if KMS_DIAGNOSTICS_EVENTS < 1 || KMS_DIAGNOSTICS_EVENTS > 1024 || KMS_DIAGNOSTICS_SNAPSHOTS < 1 || KMS_DIAGNOSTICS_SNAPSHOTS > 72 || KMS_DIAGNOSTICS_STATS_MS < 1000 || KMS_DIAGNOSTICS_STATS_MS >= 0x80000000u || KMS_DIAGNOSTICS_IDLE_MS < 1 || KMS_DIAGNOSTICS_REPEAT_MS < 1
+#error Invalid diagnostic capacity or timing
+#endif
+#if (KMS_DIAGNOSTICS_ENABLED != 0 && KMS_DIAGNOSTICS_ENABLED != 1) || (KMS_DIAGNOSTICS_PERSIST != 0 && KMS_DIAGNOSTICS_PERSIST != 1)
+#error Diagnostic enable and persistence settings must be zero or one
+#endif
+#if KMS_INPUTS < 1 || KMS_INPUTS > 254 || KMS_HID_FIELDS > 255 || KMS_HID_USAGES > 255
+#error Parser and source capacities exceed their index representation
+#endif
+#if KMS_USB_HID_INTERFACES < 1 || KMS_USB_HID_INTERFACES > 8
+#error Interface capacity must fit the ESP32-S3 host channel budget
+#endif
+#if KMS_USB_ALLOC_RETRY_MS < 100 || KMS_USB_ALLOC_RETRY_MS >= 0x80000000u
+#error Invalid USB allocation retry interval
+#endif
+#if KMS_USB_RAW_QUEUE_DEPTH < 2 || KMS_USB_RAW_QUEUE_DEPTH > 64
+#error Invalid USB raw report queue capacity
+#endif
+#if KMS_USB_CONTROL_TIMEOUT_MS <= KMS_LED_USB_WATCHDOG_MS || KMS_USB_CONTROL_TIMEOUT_MS >= 0x80000000u || KMS_USB_PROBE_MS < 100 || KMS_USB_PROBE_FAILURES < 1 || KMS_USB_PROBE_FAILURES > 255 || KMS_USB_CALL_WATCH_MS < 1 || KMS_USB_CALL_TIMEOUT_MS <= KMS_USB_CONTROL_TIMEOUT_MS || KMS_USB_CALL_TIMEOUT_MS >= 0x80000000u || KMS_USB_CALL_WATCH_MS >= KMS_USB_CALL_TIMEOUT_MS
+#error Invalid USB transaction health settings
+#endif
+#if KMS_USB_RECOVERY_OFF_MS < 1 || KMS_USB_RECOVERY_DRAIN_MS <= KMS_USB_RECOVERY_OFF_MS || KMS_USB_RECOVERY_ENUM_MS <= KMS_USB_PROBE_MS || KMS_USB_RECOVERY_ATTEMPTS < 1 || KMS_USB_RECOVERY_ATTEMPTS > 10 || KMS_USB_RECOVERY_WINDOW_MS <= KMS_USB_RECOVERY_ENUM_MS || KMS_USB_RECOVERY_WINDOW_MS >= 0x80000000u || KMS_USB_RESTART_LOG_MS < 1
+#error Invalid USB recovery bounds
+#endif
+#if KMS_RADIO_RETRY_WINDOW_MS >= KMS_LEASE_MS || KMS_RADIO_MAX_AGE_MS >= KMS_LEASE_MS
+#error Radio recovery deadlines must be shorter than the input lease
+#endif
+#if KMS_RADIO_TX_TIMEOUT_MS <= KMS_RADIO_RETRY_WINDOW_MS || KMS_RADIO_TX_TIMEOUT_MS >= KMS_RECOVERY_BUFFER_MS || KMS_RADIO_RECOVERY_ATTEMPTS < 1 || KMS_RADIO_RECOVERY_WINDOW_MS <= KMS_RADIO_TX_TIMEOUT_MS || KMS_RADIO_RECOVERY_WINDOW_MS >= 0x80000000u
+#error Invalid radio transmit recovery bounds
+#endif
+#if KMS_HID_FIELDS < 1 || KMS_HID_USAGES < 1 || KMS_HID_GLOBAL_DEPTH < 1 || KMS_HID_COLLECTION_DEPTH < 1
+#error HID parser capacities must be positive
+#endif
+#if KMS_RADIO_QUEUE_DEPTH < 2 || KMS_RADIO_RX_DEPTH < 1 || KMS_USB_QUEUE_DEPTH < 1 || KMS_USB_EVENT_DEPTH < 1
+#error Queues must have positive capacity (radio transmit needs at least two entries)
+#endif
+#if KMS_MAIN_POLL_MS < 1 || KMS_LED_BLINK_MS < 1 || KMS_DIAGNOSTIC_STEP_MS < 1
+#error Poll and indicator intervals must be positive
+#endif
+#if KMS_APP_TASK_PRIORITY <= 1 || KMS_APP_TASK_PRIORITY >= KMS_USB_TASK_PRIORITY
+#error Application delivery must run above background workers and below USB
+#endif
+#if KMS_CONFIG_MS < 1 || KMS_BUTTON_RECOVERY_PRESSES < 2 || KMS_BUTTON_RECOVERY_PRESSES > 255 || KMS_BUTTON_MULTI_PRESS_MS < 1 || KMS_BUTTON_SHORT_PRESS_MS <= KMS_BUTTON_DEBOUNCE_MS
+#error Invalid configuration or recovery gesture settings
+#endif
+#if KMS_LED_NORMAL_ENABLED != 0 && KMS_LED_NORMAL_ENABLED != 1
+#error Normal RGB indication must be enabled (1) or disabled (0)
+#endif
+#if (KMS_KEYBOARD_LEDS_ENABLED != 0 && KMS_KEYBOARD_LEDS_ENABLED != 1) || KMS_HID_LED_FIELDS < 1 || KMS_HID_LED_FIELDS > 255
+#error Invalid keyboard LED enable or field capacity
+#endif
+#if KMS_LED_RADIO_MIN_MS < 1 || KMS_LED_USB_RETRY_MS < 1 || KMS_LED_USB_ATTEMPTS < 1 || KMS_LED_USB_ATTEMPTS > 255 || KMS_LED_USB_WATCHDOG_MS < 1 || KMS_LED_USB_REFRESH_MS <= KMS_LED_USB_RETRY_MS
+#error Invalid keyboard LED timing or retry settings
+#endif
+#if KMS_FACTORY_RESET_HOLD_MS <= KMS_BUTTON_SHORT_PRESS_MS || KMS_FACTORY_RESET_WINDOW_MS < 1
+#error Factory reset must require a deliberate hold in a startup window
+#endif
+#if KMS_LED_PAIRING_BLINK_MS < 1 || KMS_LED_SELECTION_BLINK_MS < 1 || KMS_LED_FAILURE_BLINK_MS < 1 || KMS_LED_CONFIG_BLINK_MS < 1 || KMS_LED_FACTORY_BLINK_MS < 1
+#error Indicator blink intervals must be positive
+#endif
+#if KMS_LED_NOTICE_ON_MS < 1 || KMS_LED_NOTICE_OFF_MS < 1 || KMS_LED_RECOVERY_FLASHES < 1 || KMS_LED_CONFIG_SAVED_FLASHES < 1 || KMS_LED_CONFIG_CANCEL_FLASHES < 1 || KMS_LED_SAVE_ERROR_FLASHES < 1 || KMS_LED_FAILURE_FLASHES < 1
+#error Indicator patterns need positive durations and flash counts
+#endif
+#if ((KMS_LED_SELECTION_COLOR | KMS_LED_PAIRING_COLOR | KMS_LED_FAILURE_COLOR | KMS_LED_IDLE_COLOR | KMS_LED_CONFIG_COLOR | KMS_LED_STARTUP_COLOR | KMS_LED_FACTORY_HOLD_COLOR | KMS_LED_FACTORY_READY_COLOR | KMS_LED_RECOVERY_COLOR | KMS_LED_CONFIG_SAVED_COLOR | KMS_LED_CONFIG_CANCEL_COLOR) & ~KMS_COLOR_WHITE)
+#error RGB colours must use only the red, green and blue mask bits
+#endif
+
+#if KMS_DIAGNOSTICS_QUEUE_DEPTH < 2 || KMS_DIAGNOSTICS_QUEUE_DEPTH > 64 || KMS_DIAGNOSTICS_SCAN_BATCH < 1 || KMS_DIAGNOSTICS_SCAN_BATCH > 32 || KMS_SLAVE_HISTORY_SAVE_MS < 1000
+#error Invalid diagnostic worker bounds
+#endif

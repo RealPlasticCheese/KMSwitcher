@@ -1,0 +1,36 @@
+{
+  "source": "Synthetic regression fixture",
+  "token": 42,
+  "old_timeout_seconds": 1.2,
+  "reply_seconds": 2.0,
+  "events": [
+    {
+      "seconds": 0.1,
+      "line": "I (100) diagnostics: collecting USB status"
+    },
+    {
+      "seconds": 1.0,
+      "line": "I (1000) diagnostics: collecting USB status"
+    },
+    {
+      "seconds": 1.7,
+      "line": "KMSUSBSTATUS BEGIN id=42 boot=37ef0fa9 at=2000 slot=6 fault=2"
+    },
+    {
+      "seconds": 1.71,
+      "line": "KMSUSBSTATUS STATE state=0 attempts=0 recovered=0 restarts=0 controls=3 hubs=1 inputs=2 capacity=8 sources=2 suspended=0 pending=0"
+    },
+    {
+      "seconds": 1.72,
+      "line": "KMSUSBSTREAM COUNTS completed=100 pending=0 peak=2/8 dropped=0 stale=0 expired=0 overflows=0 last-complete=900"
+    },
+    {
+      "seconds": 1.73,
+      "line": "KMSUSBSTREAM TIMING callback-us=100 callback-at=200 dispatch-us=200 dispatch-at=300 poll-gap-us=300 gap-at=400 decode-us=40 decode-at=500"
+    },
+    {
+      "seconds": 2.0,
+      "line": "KMSUSBSTATUS END id=42"
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "espIdfVersion": "v6.1",
+  "eimVersion": "v0.20.0",
+  "eimWindowsX64Sha256": "39ba2064bc7690509007ad532f6a669790610bec4290f8ceae4e4f5a993df197",
+  "targets": [
+    "esp32s3",
+    "esp32s2"
+  ],
+  "espIdfCommit": "fff9895c82d744c7237be8847347bdd1b07c6643"
+}

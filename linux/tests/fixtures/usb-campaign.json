@@ -1,0 +1,135 @@
+{
+  "source": "Synthetic regression fixture",
+  "previous_active": {
+    "run": 1,
+    "source": 1,
+    "offered": 101,
+    "submitted": 101,
+    "completed": 101,
+    "missed": 0,
+    "crc": 1234,
+    "running": 0,
+    "pending": 0
+  },
+  "inactive_after": {
+    "run": 2,
+    "source": 1,
+    "offered": 101,
+    "submitted": 101,
+    "completed": 101,
+    "missed": 0,
+    "crc": 1234,
+    "running": 0,
+    "pending": 0
+  },
+  "stalled_generator": {
+    "run": 3,
+    "source": 2,
+    "offered": 102,
+    "submitted": 101,
+    "completed": 100,
+    "missed": 1,
+    "crc": 1234,
+    "running": 0,
+    "pending": 1
+  },
+  "before": {
+    "id": 42,
+    "boot": 938413993,
+    "at": 1000,
+    "slot": 6,
+    "fault": 0,
+    "state": {
+      "state": 0,
+      "attempts": 0,
+      "recovered": 0,
+      "restarts": 0,
+      "controls": 3,
+      "hubs": 1,
+      "inputs": 2,
+      "capacity": 8,
+      "sources": 2,
+      "suspended": 0,
+      "pending": 0
+    },
+    "counts": {
+      "completed": 100,
+      "pending": 0,
+      "peak": [
+        2,
+        8
+      ],
+      "dropped": 0,
+      "stale": 0,
+      "expired": 0,
+      "overflows": 0,
+      "last-complete": 900
+    },
+    "timing": {
+      "callback-us": 100,
+      "callback-at": 200,
+      "dispatch-us": 200,
+      "dispatch-at": 300,
+      "poll-gap-us": 300,
+      "gap-at": 400,
+      "decode-us": 40,
+      "decode-at": 500
+    }
+  },
+  "after": {
+    "id": 42,
+    "boot": 938413993,
+    "at": 3000,
+    "slot": 6,
+    "fault": 1,
+    "state": {
+      "state": 0,
+      "attempts": 0,
+      "recovered": 0,
+      "restarts": 0,
+      "controls": 3,
+      "hubs": 1,
+      "inputs": 2,
+      "capacity": 8,
+      "sources": 2,
+      "suspended": 0,
+      "pending": 0
+    },
+    "counts": {
+      "completed": 100,
+      "pending": 0,
+      "peak": [
+        2,
+        8
+      ],
+      "dropped": 0,
+      "stale": 0,
+      "expired": 0,
+      "overflows": 0,
+      "last-complete": 900
+    },
+    "timing": {
+      "callback-us": 100,
+      "callback-at": 200,
+      "dispatch-us": 200,
+      "dispatch-at": 300,
+      "poll-gap-us": 300,
+      "gap-at": 400,
+      "decode-us": 40,
+      "decode-at": 500
+    }
+  },
+  "fault_lines": [
+    "KMSUSBFAULT BEGIN 1 boot=37ef0fa9 at=2000 slot=6 op=3 target=9/0",
+    "KMSUSBFAULT BUS at=2000 hfnum=00000006 hprt=00001005 gintsts=00000000 gintmsk=00000000 haint=00000000",
+    "KMSUSBSTATE SAMPLE at=1400 frame=00000001 core=00000000 ahb=00000021 clock=00000000 irqs=10 channels=00000000",
+    "KMSUSBSTATE SAMPLE at=1500 frame=00000002 core=00000000 ahb=00000021 clock=00000000 irqs=10 channels=00000000",
+    "KMSUSBSTATE SAMPLE at=1600 frame=00000003 core=00000000 ahb=00000021 clock=00000000 irqs=10 channels=00000000",
+    "KMSUSBSTATE SAMPLE at=1700 frame=00000004 core=00000000 ahb=00000021 clock=00000000 irqs=10 channels=00000000",
+    "KMSUSBSTATE SAMPLE at=1800 frame=00000005 core=00000000 ahb=00000021 clock=00000000 irqs=10 channels=00000000",
+    "KMSUSBSTATE SAMPLE at=1900 frame=00000006 core=00000000 ahb=00000021 clock=00000000 irqs=10 channels=00000000",
+    "KMSUSBTRACE QTD current=80000000,00000000,00000000",
+    "KMSUSBFAULT PENDING address=9 ep=0 status=-1",
+    "KMSUSBFAULT END"
+  ]
+}

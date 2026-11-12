@@ -1,0 +1,13 @@
+# Runtime and build inputs. Regenerate platform locks with pip-compile --generate-hashes.
+hidapi==0.15.0
+dbus-next==0.2.3; sys_platform == 'linux'
+esptool==5.1.0
+# 6.12.0 loses Py_None references on Python 3.10/3.11 and aborts during polling.
+PySide6-Essentials==6.11.3
+pyinstaller==6.22.3
+setuptools==80.9.0
+wheel==0.45.1
+unittest-xml-reporting==3.2.0
+PyYAML==6.0.3
+pyudev>=0.24,<1; sys_platform == 'linux'
+evdev>=1.6,<2; sys_platform == 'linux'

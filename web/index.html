@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101b2a">
+  <meta name="description" content="KMSwitcher live serial terminal and local firmware build helpers.">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>KMSwitcher · Engineering Console</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23101b2a'/%3E%3Cpath d='M8 8v16m15-16L12 16l11 8' stroke='%235ce0c0' stroke-width='3' fill='none'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="styles.css">
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="?"><span class="brand-mark" aria-hidden="true">K<span>↗</span></span><span>KMSwitcher<small>ENGINEERING CONSOLE</small></span></a>
+    <div class="connection"><label class="theme-label">Theme <select id="theme"><option value="light">Light</option><option value="dark">Dark</option><option value="system" selected>System</option></select></label><span id="connection-state" class="badge"><span class="dot"></span>Disconnected</span><label class="baud-label">Console speed <select id="baud-rate" aria-label="Console speed"></select></label><button id="connect" class="primary">Connect controller <span aria-hidden="true">↗</span></button><button id="disconnect" hidden>Disconnect</button></div>
+  </header>
+  <main>
+    <div id="demo-banner" class="demo-banner" hidden><strong>DEMO MODE</strong> Simulated devices. No hardware is connected. <a href="?">Exit demo ↗</a></div>
+    <section class="intro">
+      <div><p class="eyebrow">KMSWITCHER / ENGINEERING</p><h1>Engineering Console<span>.</span></h1><p class="subtitle">Live controller diagnostics, serial commands and local firmware build tools.</p></div>
+      <a id="demo-link" href="?demo=1">Explore demo <span aria-hidden="true">→</span></a>
+    </section>
+    <div id="support" class="notice" hidden></div>
+    <div id="message" class="message" role="status" aria-live="polite">Connect the S3’s COM/UART port to get started.</div>
+    <section id="console-panel" class="panel console-panel" aria-labelledby="console-title">
+      <div class="panel-heading"><div><p class="eyebrow">LIVE SERIAL</p><span id="controller-info" class="tag">ESP32-S3 · COM/UART</span><h2 id="console-title">Console <span class="terminal-prompt" aria-hidden="true">&gt;_</span></h2></div><div class="button-row"><label class="checkbox follow"><input id="autoscroll" type="checkbox" checked> Follow output</label><button id="download-console">Download log</button><button id="clear-console">Clear view</button><button id="maximise-console" aria-pressed="false" aria-controls="console-panel">Maximise ↗</button></div></div>
+      <div class="console-shortcuts"><span>QUICK COMMANDS</span><button data-command="help" data-device>help</button><button data-command="about" data-device>about</button><button data-command="status" data-device>status</button><button data-command="history" data-device>history</button><button data-command="slaves" data-device>slaves</button><button data-command="stats-save" data-device>Save checkpoint</button><label class="checkbox"><input id="show-protocol" type="checkbox"> Show transfer frames</label></div>
+      <pre id="console-output" tabindex="0" aria-label="Serial output"></pre>
+      <form id="command-form" class="command-line"><span aria-hidden="true">❯</span><label class="sr-only" for="command">Console command</label><input id="command" autocomplete="off" spellcheck="false" maxlength="511" placeholder="Type a command, or start with help" data-device><button type="submit" data-device>Send ↵</button></form>
+      <div class="console-footer"><span id="line-count">0 lines</span><span>↑ ↓ command history · logs stay in this browser tab</span></div>
+    </section>
+    <section class="panel build-panel" aria-labelledby="build-title">
+      <div class="panel-heading"><div><p class="eyebrow">LOCAL BUILD TOOLS</p><h2 id="build-title">Build firmware</h2></div><span class="tag">NO WEB SERVER</span></div>
+      <p class="panel-description">Choose a target, then download and open its build launcher, or copy the PowerShell command. Builds run in a separate window using the repo's pinned ESP-IDF setup. One receiver image works for all S2 receivers.</p>
+      <div class="build-options"><label for="build-root">Repository folder</label><input id="build-root" type="text" spellcheck="false" placeholder="C:\path\to\KMSwitcher"><label for="build-target">Firmware target</label><select id="build-target"><option value="all">Controller and receivers</option><option value="controller">Controller · ESP32-S3</option><option value="receiver">Receivers · ESP32-S2</option></select></div>
+      <label class="checkbox build-reset"><input id="build-reset" type="checkbox"> Regenerate SDK configuration from repository defaults</label>
+      <pre id="build-command" tabindex="0" aria-label="PowerShell build command"></pre>
+      <div class="build-actions button-row"><button id="build-download" class="primary">Download build launcher</button><button id="build-copy">Copy PowerShell command</button></div>
+      <p id="build-status" class="panel-description" role="status" aria-live="polite">The browser prepares the launcher; open the downloaded .cmd file to start the build. Building does not flash hardware.</p>
+      <p class="fine-print">You can also double-click build-all.cmd, build-controller.cmd or build-receivers.cmd in the web folder. The build window shows progress, reports failures and pauses before closing.</p>
+      <div id="build-results"></div>
+      <p class="fine-print">Use Firmware Setup to open the generated application image and manifest or perform wired installation and recovery.</p>
+    </section>
+    <footer><span><span class="dot"></span> Direct to your device. No cloud connection.</span><span>KMSwitcher / Engineering Console</span></footer>
+  </main>
+  <noscript>This console requires JavaScript and a browser with Web Serial support.</noscript>
+  <footer>KMSwitcher by <a href="https://plasticcheese.com/">Frank Tzanabetis</a></footer>
+</body>
+</html>

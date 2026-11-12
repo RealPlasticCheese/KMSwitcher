@@ -1,0 +1,31 @@
+idf_component_register(SRCS "main.c" "pattern.c" INCLUDE_DIRS "."
+                       REQUIRES espressif__esp_tinyusb esp_hw_support esp_timer esp_app_format kms_core)
+
+option(KMS_GEN_DRIVER_TRACE "Capture synthetic-device USB controller evidence" ON)
+if(KMS_GEN_DRIVER_TRACE)
+    if(NOT IDF_TARGET STREQUAL "esp32s3")
+        message(FATAL_ERROR "Generator register trace supports only ESP32-S3")
+    endif()
+    target_sources(${COMPONENT_LIB} PRIVATE "generator_trace.c")
+    target_compile_definitions(${COMPONENT_LIB} PRIVATE KMS_GENERATOR_TRACE=1)
+    idf_component_get_property(tusb_dir espressif__tinyusb COMPONENT_DIR)
+    idf_component_get_property(tusb_lib espressif__tinyusb COMPONENT_LIB)
+    set(dcd "${tusb_dir}/src/portable/synopsys/dwc2/dcd_dwc2.c")
+    set(overlay "${CMAKE_CURRENT_BINARY_DIR}/dcd_dwc2_traced.c")
+    execute_process(COMMAND "${PYTHON}" "${CMAKE_CURRENT_LIST_DIR}/../instrument_dcd.py"
+        "${dcd}" "${overlay}" COMMAND_ERROR_IS_FATAL ANY)
+    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${dcd}"
+        "${CMAKE_CURRENT_LIST_DIR}/../instrument_dcd.py")
+    get_target_property(sources ${tusb_lib} SOURCES)
+    list(LENGTH sources before)
+    list(FILTER sources EXCLUDE REGEX "(^|/)dcd_dwc2\\.c$")
+    list(LENGTH sources after)
+    math(EXPR removed "${before}-${after}")
+    if(NOT removed EQUAL 1)
+        message(FATAL_ERROR "Expected one TinyUSB DCD source")
+    endif()
+    set_property(TARGET ${tusb_lib} PROPERTY SOURCES "${sources}")
+    target_sources(${tusb_lib} PRIVATE "${overlay}")
+    target_include_directories(${tusb_lib} PRIVATE "${CMAKE_CURRENT_LIST_DIR}"
+        "${tusb_dir}/src/portable/synopsys/dwc2")
+endif()

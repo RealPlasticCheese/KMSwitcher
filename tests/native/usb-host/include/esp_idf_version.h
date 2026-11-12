@@ -1,0 +1,4 @@
+#pragma once
+#define ESP_IDF_VERSION_MAJOR 6
+#define ESP_IDF_VERSION_MINOR 1
+#define CONFIG_IDF_TARGET_ESP32S3 1

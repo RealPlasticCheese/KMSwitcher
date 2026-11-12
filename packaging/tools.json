@@ -1,0 +1,8 @@
+{
+  "innoVersion": "7.1.0",
+  "innoUrl": "https://github.com/jrsoftware/issrc/releases/download/is-7_1_0/innosetup-7.1.0-x64.exe",
+  "innoSha256": "0362a383ed217d4c4239b5933866dd96d3eb2102737da92f80f6057a4b40df2f",
+  "lockGenerator": "uv==0.13.5",
+  "linuxBuildImage": "ubuntu:22.04",
+  "windowsAgent": "windows-2022"
+}

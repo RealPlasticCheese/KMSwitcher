@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kmswitcher-companion"
+dynamic = ["version"]
+description = "KMSwitcher desktop helper, station configuration and command line tools"
+requires-python = ">=3.10"
+authors = [{name = "Frank Tzanabetis"}]
+license = "MIT"
+license-files = ["LICENSE"]
+dependencies = ["hidapi>=0.15,<1", "esptool>=5.1,<6", "cryptography>=43,<47", "dbus-next>=0.2.3,<0.3; sys_platform == 'linux'"]
+
+[project.optional-dependencies]
+ui = ["PySide6-Essentials>=6.6,<7,!=6.12.0"]
+build = ["pyinstaller>=6,<7"]
+
+[project.urls]
+Homepage = "https://plasticcheese.com"
+Repository = "https://github.com/RealPlasticCheese/KMSwitcher"
+
+[project.scripts]
+kmswitcher = "kms_companion.cli:main"
+kms-firmware = "kms_update.__main__:main"
+
+[project.gui-scripts]
+kmswitcher-gui = "kms_companion.gui:main"
+kms-setup = "kms_update.gui:main"
+
+[tool.setuptools.dynamic]
+version = {attr = "kms_companion.__version__"}
+
+[tool.setuptools.package-data]
+kms_companion = ["VERSION", "build-info.json"]
+
+[tool.setuptools.packages.find]
+include = ["kms_companion*", "kms_update*", "kms_transport*"]

@@ -1,0 +1,5 @@
+{
+  "idf.buildPath": "${workspaceFolder}/../../build/controller",
+  "idf.customExtraVars": {"IDF_TARGET": "esp32s3", "PYTHONUTF8": "1"},
+  "C_Cpp.default.compileCommands": "${workspaceFolder}/../../build/controller/compile_commands.json"
+}

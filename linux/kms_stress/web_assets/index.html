@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>KMSwitcher hardware test</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <header>
+    <div><p class="eyebrow">KMSWITCHER · HARDWARE LAB</p><h1>Hardware test</h1><p>Configure your fixture, run a test, and collect the evidence.</p></div>
+    <span id="connection" class="badge">Connecting…</span>
+  </header>
+  <main>
+    <div id="error" role="alert" hidden></div>
+    <section class="panel command-bar" aria-label="Test controls">
+      <div class="actions">
+        <button id="discover" data-idle>Discover devices</button>
+        <button id="start" class="primary" data-idle>Start test</button>
+        <button id="stop" class="danger" disabled>Stop</button>
+        <button id="demo" data-idle>Run demo</button>
+      </div>
+      <p id="run-summary" hidden role="status" aria-live="polite"></p>
+      <p id="status" role="status" aria-live="polite">Connecting to the test controller…</p>
+      <p class="muted">Hardware and output folders belong to the Linux server. The master stays paused after a test. Closing this tab leaves a test running.</p>
+      <div id="latest" class="actions" hidden></div>
+    </section>
+    <form id="configuration">
+      <fieldset id="editor" disabled>
+        <section class="panel">
+          <div class="section-heading"><div><p class="eyebrow">01 / FIXTURE</p><h2>Devices</h2></div>
+            <div class="actions"><button type="button" id="restart-all" data-idle>Restart all devices</button><button type="button" id="add-generator">Add generator</button><button type="button" id="add-receiver">Add receiver</button></div>
+          </div>
+          <p class="muted">Discover first, then review identities and enable the devices taking part. Select exactly one master in the Use column before starting a routed test. Remove a master and discover to replace it. Saved slot assignments are retained when identities change.</p>
+          <div class="table-scroll"><table class="devices"><thead><tr><th scope="col">Use</th><th scope="col">Role</th><th scope="col">Name</th><th scope="col">Chip identity</th><th scope="col">UART / slave slot</th><th scope="col">Action</th></tr></thead><tbody id="devices"></tbody></table></div>
+          <div class="actions"><button type="button" id="enable-all">Enable all generators / receivers</button><button type="button" id="disable-all">Disable all generators / receivers</button></div>
+        </section>
+        <section class="panel">
+          <div class="section-heading"><div><p class="eyebrow">02 / WORKLOAD</p><h2>Test setup</h2></div><span id="version" class="muted"></span></div>
+          <div class="settings">
+            <label>Test preset<select id="preset" name="preset"></select></label>
+            <label>Reports/s per generator<input name="rates" id="rates" required placeholder="10, 25, 50, 100"></label>
+            <label>Seconds per segment<input name="seconds" id="seconds" type="number" min="1" max="3600" required></label>
+            <label>Soak / All tests total, or Mixed soak per receiver (seconds)<input name="soak_seconds" id="soak_seconds" type="number" min="1" max="604800" required></label>
+            <label>Random seed<input name="seed" id="seed" type="number" min="0" max="4294967295" required></label>
+            <label>Capture / trace budget (MB)<input name="max_log_mb" id="max_log_mb" type="number" min="16" max="65536" required></label>
+            <label class="wide">Results directory on server<input name="output" id="output" required></label>
+              <label>Campaign attempts per failing case<input id="campaign_repeats" type="number" min="1" max="10" required></label>
+              <label>Campaign / Mixed soak idle (seconds)<input id="campaign_idle_seconds" type="number" min="0" max="3600" required></label>
+              <label>Recovery attempts — All tests<input id="recovery_attempts" type="number" min="1" max="10" required></label>
+              <label class="wide">Fixture / hub notes<input id="fixture_notes" maxlength="1024" placeholder="For example: EDO hub; separated receivers"></label>
+          </div>
+            <div class="actions">
+              <label>Replay USB campaign recipe<input id="campaign_recipe_file" type="file" accept="application/json,.json"></label>
+              <button type="button" id="clear_campaign_recipe">Clear campaign replay</button>
+            </div>
+          <label class="check"><input name="stop_on_failure" id="stop_on_failure" type="checkbox"> Stop at first unexpected failure</label>
+          <label class="check"><input name="restart_before_run" id="restart_before_run" type="checkbox"> Restart enabled devices before each test</label>
+          <p class="muted">Restart keeps pairings and settings. Receivers need firmware with USB restart support. Restart all includes devices unchecked in Use; automatic restart includes only the test's enabled devices.</p>
+          <p id="workload" role="status" aria-live="polite"></p>
+          <p id="loop-note" hidden>All tests repeats compatible tests until the total duration expires. Baseline needs different wiring. Failed cases remain in the report; recovery must restore neutral input and fresh capture before continuing. Final capture and cleanup can finish after the input deadline.</p>
+          <p id="suite-progress" hidden role="status" aria-live="polite"></p>
+          <div class="actions profile-actions">
+            <button type="submit">Save profile</button>
+            <button type="button" id="export-profile">Download profile</button>
+            <label class="file-button">Import profile<input type="file" id="import-profile" accept=".json,application/json"></label>
+          </div>
+          <p id="profile" class="muted path"></p>
+          <p class="muted">Save a changed results directory to browse its reports below. Demo uses simulated devices and never opens the fixture.</p>
+        </section>
+      </fieldset>
+    </form>
+    <section class="panel">
+      <div class="section-heading"><div><p class="eyebrow">03 / LIVE</p><h2>Progress &amp; diagnostics</h2></div><button id="save-log">Download log</button></div>
+      <pre id="log" tabindex="0" aria-label="Test progress and diagnostics"></pre>
+    </section>
+    <section class="panel">
+      <div class="section-heading"><div><p class="eyebrow">04 / EVIDENCE</p><h2>Saved reports</h2></div><button id="refresh-reports">Refresh reports</button></div>
+      <p id="report-root" class="muted path"></p>
+      <label class="search">Find a report<input id="report-search" type="search" placeholder="Folder name, result, or message"></label>
+      <p class="muted">Each ZIP contains the complete run folder: HTML report, profile, results, captures, and traces. Completed reports appear automatically.</p>
+      <div class="table-scroll"><table><thead><tr><th scope="col">Report folder</th><th scope="col">Result</th><th scope="col">Saved</th><th scope="col">Files</th></tr></thead><tbody id="reports"></tbody></table></div>
+      <p id="empty-reports">No completed reports in this directory yet. Run a test or try a demo.</p>
+    </section>
+  </main>
+  <footer>Local test controller · Trusted LAN access · <span id="footer-version"></span></footer>
+</body>
+</html>

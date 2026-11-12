@@ -1,0 +1,3 @@
+# Original bring-up console. The ROM console failed enumeration on this S2;
+# prefer board-check's TinyUSB console for current hardware diagnostics.
+CONFIG_ESP_CONSOLE_USB_CDC=y

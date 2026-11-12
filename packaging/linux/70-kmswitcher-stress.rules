@@ -1,0 +1,9 @@
+# Access is scoped to the test receivers, generators and programming bridges.
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="303a", ATTRS{idProduct}=="4005", TAG+="uaccess"
+SUBSYSTEM=="input", KERNEL=="event*", ATTRS{idVendor}=="303a", ATTRS{idProduct}=="4005", TAG+="uaccess"
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="303a", ATTRS{idProduct}=="4006", TAG+="uaccess"
+SUBSYSTEM=="input", KERNEL=="event*", ATTRS{idVendor}=="303a", ATTRS{idProduct}=="4006", TAG+="uaccess"
+SUBSYSTEM=="tty", ATTRS{idVendor}=="303a", TAG+="uaccess"
+SUBSYSTEM=="tty", ATTRS{idVendor}=="1a86", TAG+="uaccess"
+SUBSYSTEM=="tty", ATTRS{idVendor}=="10c4", TAG+="uaccess"
+SUBSYSTEM=="tty", ATTRS{idVendor}=="0403", TAG+="uaccess"

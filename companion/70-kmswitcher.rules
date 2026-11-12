@@ -1,0 +1,8 @@
+# Grant the active local desktop user access to this receiver's hidraw nodes.
+# The application opens only vendor collection ff00:0002.
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="303a", ATTRS{idProduct}=="4005", TAG+="uaccess"
+# Programming mode and the UART bridges used on supported development boards.
+SUBSYSTEM=="tty", ATTRS{idVendor}=="303a", TAG+="uaccess"
+SUBSYSTEM=="tty", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", TAG+="uaccess"
+SUBSYSTEM=="tty", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="7523", TAG+="uaccess"
+SUBSYSTEM=="tty", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="55d3", TAG+="uaccess"

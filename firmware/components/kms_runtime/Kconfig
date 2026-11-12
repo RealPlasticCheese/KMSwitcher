@@ -1,0 +1,10 @@
+menu "KMSwitcher test support"
+config KMS_TEST_SUPPORT
+    bool "Include software-controlled hardware test support"
+    default y
+    help
+        Adds bounded RAM traces, a master UART test console and a receiver
+        USB feature report. Everyday startup honours the saved boot dongle.
+        A test session must be explicitly enabled; traces allocate RAM only
+        when armed. Disable only for a minimal build without test controls.
+endmenu

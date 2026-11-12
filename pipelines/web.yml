@@ -1,0 +1,73 @@
+trigger:
+  batch: true
+  branches:
+    include:
+    - master
+  tags:
+    include:
+    - web/v*
+  paths:
+    include:
+    - web/**
+    - scripts/manage-slaves.py
+    - firmware/components/kms_core/include/kms_protocol.h
+    - scripts/ci-preflight.py
+    - scripts/ci-tests.py
+    - scripts/release-version.py
+    - scripts/component-artifact.py
+    - pipelines/components.json
+    - versions/web.txt
+    - pipelines/web.yml
+    - pipelines/templates/**
+    - firmware/components/kms_core/include/kms_management.h
+    - firmware/components/kms_core/include/kms_firmware_cache.h
+    - firmware/components/kms_core/include/kms_cached_update.h
+    - companion/kms_update/cache.py
+    - companion/kms_update/firmware.py
+    - companion/kms_update/management.py
+    - scripts/package-firmware.py
+    - config/partitions.*.csv
+pr: none
+name: web-$(Build.BuildId)
+appendCommitMessageToRunName: false
+parameters:
+- name: runLinuxOnAzure
+  displayName: 'Run Linux jobs on Azure instead of the self-hosted runner'
+  type: boolean
+  default: false
+jobs:
+- job: Console
+  pool:
+    ${{ if eq(parameters.runLinuxOnAzure, true) }}:
+      vmImage: ubuntu-22.04
+    ${{ else }}:
+      name: SelfHosted-Linux
+      demands:
+      - Agent.OS -equals Linux
+  steps:
+  - template: templates/identity.yml
+    parameters:
+      component: web
+  - task: NodeTool@0
+    inputs:
+      versionSpec: 24.15.0
+  - task: Cache@2
+    condition: and(succeeded(), ${{ parameters.runLinuxOnAzure }})
+    inputs:
+      key: npm | linux | web/package-lock.json
+      path: $(Pipeline.Workspace)/npm-cache
+  - bash: 'set -euo pipefail
+
+      npm ci --prefix web --cache "$(Pipeline.Workspace)/npm-cache"
+
+      npm test --prefix web
+
+      npm run build --prefix web
+
+      python3 scripts/component-artifact.py web/dist'
+  - publish: web/dist
+    artifact: console
+  - bash: python3 scripts/publish-release.py --retain
+    condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/tags/'))
+    env:
+      SYSTEM_ACCESSTOKEN: $(System.AccessToken)

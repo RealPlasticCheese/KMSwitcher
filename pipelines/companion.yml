@@ -1,0 +1,66 @@
+trigger:
+  batch: true
+  branches:
+    include:
+    - master
+  tags:
+    include:
+    - companion/v*
+  paths:
+    include:
+    - companion/kms_companion/**
+    - companion/kms_transport/**
+    - companion/tests/**
+    - firmware/components/kms_core/**
+    - firmware/components/kms_runtime/desktop_runtime.c
+    - tests/native/**
+    - config/**
+    - scripts/build-companion.py
+    - scripts/test-packaged.py
+    - scripts/test-desktop.py
+    - scripts/native_build.py
+    - scripts/install-build-dependencies.py
+    - packaging/**
+    - docs/installing.md
+    - tests/release/**
+    - scripts/agent/prepare-python.py
+    - scripts/agent/prepare-build-image.py
+    - scripts/ci-preflight.py
+    - scripts/ci-tests.py
+    - scripts/release-version.py
+    - scripts/component-artifact.py
+    - pipelines/components.json
+    - versions/companion.txt
+    - pipelines/companion.yml
+    - pipelines/templates/**
+pr: none
+name: companion-$(Build.BuildId)
+appendCommitMessageToRunName: false
+parameters:
+- name: runWindowsOnAzure
+  displayName: 'Run Windows jobs on Azure instead of the self-hosted runner'
+  type: boolean
+  default: false
+- name: runLinuxOnAzure
+  displayName: 'Run Linux jobs on Azure instead of the self-hosted runner'
+  type: boolean
+  default: false
+- name: signWindows
+  displayName: 'Sign Windows files (requires a configured signing certificate and password)'
+  type: boolean
+  default: false
+- name: signingCertificate
+  displayName: 'Windows signing certificate secure-file name (used only when signing is enabled)'
+  type: string
+  default: signing-certificate.pfx
+extends:
+  template: templates/application.yml
+  parameters:
+    runWindowsOnAzure: ${{ parameters.runWindowsOnAzure }}
+    runLinuxOnAzure: ${{ parameters.runLinuxOnAzure }}
+    component: companion
+    appDirectory: kmswitcher
+    packageCommand: python scripts/package-linux.py
+    installerCommand: sh scripts/test-linux-installer.sh "$(format)" /packages
+    signWindows: ${{ parameters.signWindows }}
+    signingCertificate: ${{ parameters.signingCertificate }}

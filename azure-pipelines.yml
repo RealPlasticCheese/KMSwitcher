@@ -1,0 +1,74 @@
+trigger: none
+pr: none
+name: downloads-$(Build.BuildId)
+appendCommitMessageToRunName: false
+parameters:
+- name: runLinuxOnAzure
+  displayName: 'Run Linux jobs on Azure instead of the self-hosted runner'
+  type: boolean
+  default: false
+- name: firmwareRun
+  displayName: 'Firmware build: latest or a numeric build ID'
+  type: string
+  default: latest
+- name: companionRun
+  displayName: 'Companion build: latest or a numeric build ID'
+  type: string
+  default: latest
+- name: setupRun
+  displayName: 'Firmware Setup build: latest or a numeric build ID'
+  type: string
+  default: latest
+- name: webRun
+  displayName: 'Web Console build: latest or a numeric build ID'
+  type: string
+  default: latest
+- name: stressRun
+  displayName: 'Optional Stress Toolkit: 0 to skip, latest or a numeric build ID'
+  type: string
+  default: '0'
+- name: stressFirmwareRun
+  displayName: 'Optional diagnostic firmware: 0 to skip, latest or a Firmware build ID'
+  type: string
+  default: '0'
+- name: allowDevelopment
+  displayName: 'Allow development builds (uncheck to use stable release tags only)'
+  type: boolean
+  default: true
+jobs:
+- job: Catalogue
+  pool:
+    ${{ if eq(parameters.runLinuxOnAzure, true) }}:
+      vmImage: ubuntu-22.04
+    ${{ else }}:
+      name: SelfHosted-Linux
+      demands:
+      - Agent.OS -equals Linux
+  steps:
+  - checkout: self
+  - bash: python3 -m unittest discover -s tests/release -p test_catalogue_downloads.py -v
+    displayName: Check artifact authentication and download preflight regressions
+  - bash: |-
+      set -euo pipefail
+      CATALOGUE_MODE=""
+      if [ "${{ lower(parameters.allowDevelopment) }}" = true ]; then CATALOGUE_MODE=--development; fi
+      python3 scripts/release-catalogue.py --firmware-run "$FIRMWARE_RUN" --companion-run "$COMPANION_RUN" --setup-run "$SETUP_RUN" --web-run "$WEB_RUN" --stress-run "$STRESS_RUN" $CATALOGUE_MODE --stress-firmware-run "$STRESS_FIRMWARE_RUN"
+    displayName: Select builds, verify packages and assemble downloads
+    env:
+      SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+      KMS_FIRMWARE_PIPELINE_ID: $(KMS_FIRMWARE_PIPELINE_ID)
+      KMS_COMPANION_PIPELINE_ID: $(KMS_COMPANION_PIPELINE_ID)
+      KMS_SETUP_PIPELINE_ID: $(KMS_SETUP_PIPELINE_ID)
+      KMS_WEB_PIPELINE_ID: $(KMS_WEB_PIPELINE_ID)
+      KMS_STRESS_PIPELINE_ID: $(KMS_STRESS_PIPELINE_ID)
+      FIRMWARE_RUN: ${{ parameters.firmwareRun }}
+      COMPANION_RUN: ${{ parameters.companionRun }}
+      SETUP_RUN: ${{ parameters.setupRun }}
+      WEB_RUN: ${{ parameters.webRun }}
+      STRESS_RUN: ${{ parameters.stressRun }}
+      STRESS_FIRMWARE_RUN: ${{ parameters.stressFirmwareRun }}
+  - publish: build/catalogue
+    artifact: release-catalogue
+  - bash: python3 scripts/publish-release.py --retain
+    env:
+      SYSTEM_ACCESSTOKEN: $(System.AccessToken)

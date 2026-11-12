@@ -1,0 +1,2 @@
+#pragma once
+enum { HID_CLASS_SPECIFIC_REQ_SET_REPORT = 9, HID_REPORT_TYPE_OUTPUT = 2 };

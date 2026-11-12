@@ -1,0 +1,16 @@
+{
+  "source": "Synthetic regression fixture",
+  "lines": [
+    "KMSUSBFAULT BEGIN 2 boot=37ef0fa9 at=4477000 slot=6 op=3 target=9/0",
+    "KMSUSBFAULT BUS at=4477000 hfnum=00000006 hprt=00001005 gintsts=00000000 gintmsk=00000000 haint=00000000",
+    "KMSUSBSTATE SAMPLE at=4476400 frame=00000001 core=00000010 ahb=00000021 clock=00000000 irqs=10 channels=00000000",
+    "KMSUSBSTATE SAMPLE at=4476500 frame=00000002 core=00000010 ahb=00000021 clock=00000000 irqs=10 channels=00000000",
+    "KMSUSBSTATE SAMPLE at=4476600 frame=00000003 core=00000010 ahb=00000021 clock=00000000 irqs=10 channels=00000000",
+    "KMSUSBSTATE SAMPLE at=4476700 frame=00000004 core=00000010 ahb=00000021 clock=00000000 irqs=10 channels=00000000",
+    "KMSUSBSTATE SAMPLE at=4476800 frame=00000005 core=00000010 ahb=00000021 clock=00000000 irqs=10 channels=00000000",
+    "KMSUSBSTATE SAMPLE at=4476900 frame=00000006 core=00000010 ahb=00000021 clock=00000000 irqs=10 channels=00000000",
+    "KMSUSBTRACE QTD current=80000000,00000000,00000000",
+    "KMSUSBFAULT PENDING address=9 ep=0 status=-1",
+    "KMSUSBFAULT END"
+  ]
+}

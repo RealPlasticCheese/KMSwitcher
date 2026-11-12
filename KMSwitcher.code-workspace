@@ -1,0 +1,7 @@
+{
+  "folders": [
+    {"name": "KMSwitcher", "path": "."},
+    {"name": "Controller (ESP32-S3)", "path": "firmware/controller"},
+    {"name": "Receiver (ESP32-S2)", "path": "firmware/receiver"}
+  ]
+}

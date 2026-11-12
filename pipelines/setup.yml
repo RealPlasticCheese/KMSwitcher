@@ -1,0 +1,69 @@
+trigger:
+  batch: true
+  branches:
+    include:
+    - master
+  tags:
+    include:
+    - setup/v*
+  paths:
+    include:
+    - companion/kms_update/**
+    - companion/kms_transport/**
+    - tests/python/**
+    - scripts/build-companion.py
+    - scripts/test-packaged.py
+    - scripts/install-build-dependencies.py
+    - packaging/**
+    - docs/installing.md
+    - tests/release/**
+    - scripts/agent/prepare-python.py
+    - scripts/agent/prepare-build-image.py
+    - scripts/ci-preflight.py
+    - scripts/ci-tests.py
+    - scripts/release-version.py
+    - scripts/component-artifact.py
+    - pipelines/components.json
+    - versions/setup.txt
+    - pipelines/setup.yml
+    - pipelines/templates/**
+    - firmware/components/kms_core/include/kms_protocol.h
+    - firmware/components/kms_core/include/kms_management.h
+    - firmware/components/kms_core/include/kms_firmware_cache.h
+    - firmware/components/kms_core/include/kms_cached_update.h
+    - azure-pipelines.yml
+    - scripts/release-catalogue.py
+    - scripts/publish-release.py
+    - scripts/configure-component-pipelines.py
+pr: none
+name: setup-$(Build.BuildId)
+appendCommitMessageToRunName: false
+parameters:
+- name: runWindowsOnAzure
+  displayName: 'Run Windows jobs on Azure instead of the self-hosted runner'
+  type: boolean
+  default: false
+- name: runLinuxOnAzure
+  displayName: 'Run Linux jobs on Azure instead of the self-hosted runner'
+  type: boolean
+  default: false
+- name: signWindows
+  displayName: 'Sign Windows files (requires a configured signing certificate and password)'
+  type: boolean
+  default: false
+- name: signingCertificate
+  displayName: 'Windows signing certificate secure-file name (used only when signing is enabled)'
+  type: string
+  default: signing-certificate.pfx
+extends:
+  template: templates/application.yml
+  parameters:
+    runWindowsOnAzure: ${{ parameters.runWindowsOnAzure }}
+    runLinuxOnAzure: ${{ parameters.runLinuxOnAzure }}
+    component: setup
+    appDirectory: kmswitcher-setup
+    packageCommand: python scripts/package-tools.py --product setup --app build/release/app/kmswitcher-setup --identity build/release/version.json
+      --output build/release/installers
+    installerCommand: sh scripts/test-tools-installer.sh "$(format)" /packages setup
+    signWindows: ${{ parameters.signWindows }}
+    signingCertificate: ${{ parameters.signingCertificate }}

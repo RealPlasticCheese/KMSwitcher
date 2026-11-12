@@ -1,0 +1,152 @@
+trigger:
+  batch: true
+  branches:
+    include:
+    - master
+  tags:
+    include:
+    - firmware/v*
+  paths:
+    include:
+    - firmware/**
+    - config/**
+    - toolchain.json
+    - scripts/idf.py
+    - scripts/setup-toolchain.sh
+    - scripts/native_build.py
+    - scripts/idf.ps1
+    - scripts/setup-toolchain.ps1
+    - scripts/build-metadata.py
+    - scripts/build-receiver-cache.py
+    - scripts/package-firmware.py
+    - scripts/package-test-firmware.py
+    - scripts/test-*.py
+    - tests/native/**
+    - tests/routing/**
+    - diagnostics/routing/**
+    - scripts/audit-routing.py
+    - tests/python/**
+    - tests/release/**
+    - companion/kms_update/cache.py
+    - companion/kms_update/firmware.py
+    - scripts/agent/prepare-python.py
+    - scripts/ci-preflight.py
+    - scripts/ci-tests.py
+    - scripts/release-version.py
+    - scripts/component-artifact.py
+    - pipelines/components.json
+    - versions/firmware.txt
+    - pipelines/firmware.yml
+    - pipelines/templates/**
+pr: none
+name: firmware-$(Build.BuildId)
+appendCommitMessageToRunName: false
+parameters:
+- name: runLinuxOnAzure
+  displayName: 'Run Linux jobs on Azure instead of the self-hosted runner'
+  type: boolean
+  default: false
+- name: stressFirmware
+  displayName: 'Also build diagnostic firmware for stress testing (leave off for normal firmware)'
+  type: boolean
+  default: false
+jobs:
+- job: Firmware
+  pool:
+    ${{ if eq(parameters.runLinuxOnAzure, true) }}:
+      vmImage: ubuntu-22.04
+    ${{ else }}:
+      name: SelfHosted-Linux
+      demands:
+      - Agent.OS -equals Linux
+  timeoutInMinutes: 120
+  variables:
+    ${{ if eq(parameters.runLinuxOnAzure, false) }}:
+      KMS_IDF_SOURCE_ROOT: $(Agent.WorkFolder)/kms-cache/esp
+    IDF_TOOLS_PATH: $(Pipeline.Workspace)/esp-idf-tools
+    IDF_CCACHE_ENABLE: '1'
+    CCACHE_DIR: $(Pipeline.Workspace)/ccache
+    CCACHE_BASEDIR: $(Build.SourcesDirectory)
+    CCACHE_MAXSIZE: 1G
+  steps:
+  - template: templates/identity.yml
+    parameters:
+      component: firmware
+  - bash: |
+      set -euo pipefail
+      sudo apt-get update -qq
+      sudo apt-get install -y build-essential git wget flex bison gperf cmake ninja-build ccache libffi-dev libssl-dev libusb-1.0-0 python3-dev python3-venv libegl1 libopengl0 libgl1 libglib2.0-0 libfontconfig1 libdbus-1-3 libxkbcommon-x11-0 libxcb-cursor0
+    displayName: Install Linux build and test prerequisites
+    condition: and(succeeded(), ${{ parameters.runLinuxOnAzure }})
+  - template: templates/python.yml
+    parameters:
+      platform: linux
+      python: '3.10'
+      selfHosted: ${{ not(parameters.runLinuxOnAzure) }}
+  - script: python scripts/ci-preflight.py --component firmware --phase python
+    displayName: Check Python, Qt and native compiler before SDK setup
+  - bash: |
+      set -euo pipefail
+      python scripts/ci-tests.py native
+      python scripts/ci-tests.py setup
+    displayName: Check native firmware, protocols and bundles before SDK setup
+  - task: Cache@2
+    condition: and(succeeded(), ${{ parameters.runLinuxOnAzure }})
+    inputs:
+      key: esp-idf-source-v1 | linux | toolchain.json | "$(Build.SourcesDirectory)"
+      path: .tools/esp
+  - task: Cache@2
+    condition: and(succeeded(), ${{ parameters.runLinuxOnAzure }})
+    inputs:
+      key: esp-idf-installed-v1 | linux | toolchain.json | "$(Build.SourcesDirectory)"
+      path: $(IDF_TOOLS_PATH)/tools
+  - task: Cache@2
+    condition: and(succeeded(), ${{ parameters.runLinuxOnAzure }})
+    inputs:
+      key: esp-idf-python-v1 | linux | toolchain.json | "$(Build.SourcesDirectory)"
+      path: $(IDF_TOOLS_PATH)/python_env
+  - bash: |
+      set -euo pipefail
+      kms_ci_python=$(command -v python)
+      source scripts/setup-toolchain.sh
+      python scripts/ci-preflight.py --component firmware --phase sdk
+      python scripts/idf.py --project receiver --release --action reconfigure
+      python scripts/idf.py --project controller --release --action reconfigure
+      "$kms_ci_python" scripts/ci-tests.py sdk
+    displayName: Activate pinned SDK, configure dependencies and check SDK adapters
+  - task: Cache@2
+    condition: and(succeeded(), ${{ parameters.runLinuxOnAzure }})
+    inputs:
+      key: ccache | linux | toolchain.json | "$(Build.SourceVersion)"
+      restoreKeys: ccache | linux | toolchain.json
+      path: $(Pipeline.Workspace)/ccache
+  - bash: |
+      set -euo pipefail
+      kms_ci_python=$(command -v python)
+      source scripts/setup-toolchain.sh
+      python scripts/idf.py --project controller --release
+      python scripts/test-memory.py --elf-only --receiver-elf build/production/receiver/kmswitcher_receiver.elf --controller-elf build/production/controller/kmswitcher_controller.elf
+      "$kms_ci_python" scripts/package-firmware.py --build build/production
+      "$kms_ci_python" scripts/component-artifact.py build/release/firmware --firmware
+    displayName: Build slave then master cache; validate and archive matched pair
+  - publish: build/release/firmware
+    artifact: firmware
+  - ${{ if eq(parameters.stressFirmware, true) }}:
+    - bash: |
+        set -euo pipefail
+        kms_ci_python=$(command -v python)
+        source scripts/setup-toolchain.sh
+        python scripts/idf.py --project hid-generator
+        "$kms_ci_python" scripts/package-test-firmware.py
+        "$kms_ci_python" scripts/component-artifact.py build/release/stress-firmware --stress-firmware
+      displayName: Build explicit same-commit diagnostic bundle
+    - publish: build/release/stress-firmware
+      artifact: stress-firmware
+    - bash: echo '##vso[build.addbuildtag]kmswitcher-stress-firmware'
+  - template: templates/results.yml
+    parameters:
+      name: firmware
+  - bash: python scripts/publish-release.py --retain
+    condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/tags/'))
+    env:
+      SYSTEM_ACCESSTOKEN: $(System.AccessToken)

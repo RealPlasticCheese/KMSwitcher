@@ -1,0 +1,6 @@
+cmake_minimum_required(VERSION 3.22)
+include("../../firmware/build_identity.cmake")
+set(EXTRA_COMPONENT_DIRS "../../firmware/components/kms_core")
+include($ENV{IDF_PATH}/tools/cmake/project.cmake)
+idf_build_set_property(MINIMAL_BUILD ON)
+project(kmswitcher_hid_generator)

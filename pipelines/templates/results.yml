@@ -1,0 +1,16 @@
+parameters:
+- name: name
+  type: string
+steps:
+- task: PublishTestResults@2
+  condition: always()
+  inputs:
+    testResultsFormat: JUnit
+    testResultsFiles: build/test-results/**/*.xml
+    failTaskOnFailedTests: true
+- script: python -c "import os; print('##vso[task.setvariable variable=hasTestLogs]' + str(os.path.isdir('build/test-logs')).lower())"
+  displayName: Check whether test logs were created
+  condition: always()
+- publish: build/test-logs
+  artifact: ${{ parameters.name }}-test-logs
+  condition: and(always(), eq(variables['hasTestLogs'], 'true'))

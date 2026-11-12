@@ -1,0 +1,44 @@
+# Fast, manual release-assembly checks using existing package outputs.
+# This does not promote a stable release or change the main pipeline's gates.
+trigger: none
+pr: none
+name: 'release-check-$(Build.BuildId)'
+
+parameters:
+- name: sourceBuildId
+  displayName: Existing KMSwitcher build containing the checked package artifacts
+  type: number
+  default: 0
+
+pool: {vmImage: ubuntu-22.04}
+steps:
+- checkout: self
+- task: UsePythonVersion@0
+  inputs: {versionSpec: '3.10', architecture: x64}
+- bash: |
+    test '${{ parameters.sourceBuildId }}' -gt 0 || { echo 'Choose a sourceBuildId containing package artifacts.'; exit 1; }
+  displayName: Require an explicit source build
+- task: DownloadPipelineArtifact@2
+  inputs:
+    buildType: specific
+    project: $(System.TeamProjectId)
+    definition: '9'
+    buildVersionToDownload: specific
+    pipelineId: '${{ parameters.sourceBuildId }}'
+    allowFailedBuilds: true
+    targetPath: $(Pipeline.Workspace)/inputs
+  displayName: Download existing KMSwitcher package outputs
+- bash: |
+    set -euo pipefail
+    mkdir -p build
+    python3 -c 'from pathlib import Path; import re; data=Path("packaging/requirements-linux.lock").read_text(); blocks=re.findall(r"(?m)^(?:packaging|pyyaml)==[^\n]*(?:\n[ \t]+[^\n]*)*", data); assert len(blocks)==2; Path("build/release-check-requirements.lock").write_text("\n".join(blocks)+"\n")'
+    python3 -m pip install --require-hashes -r build/release-check-requirements.lock
+    python3 -m unittest discover -s tests/release -p test_release.py -v
+    python3 scripts/publish-release.py --inputs '$(Pipeline.Workspace)/inputs' --output build/published --identity '$(Pipeline.Workspace)/inputs/identity/version.json'
+    echo "##vso[task.uploadsummary]$PWD/build/published/DOWNLOADS.md"
+  env:
+    PYTHONPATH: companion:tests/release
+    BUILD_BUILDID: '${{ parameters.sourceBuildId }}'
+  displayName: Check and assemble release using the current publisher
+- publish: build/published
+  artifact: checked-release

@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=KMSwitcher Companion
+Comment=Keyboard/mouse switching, desk layout and device firmware setup
+Exec=/opt/kmswitcher/kmswitcher-gui
+Icon=kmswitcher
+Terminal=false
+Categories=Utility;Settings;
+StartupNotify=true
