@@ -4,6 +4,7 @@ AppName=KMSwitcher Firmware Setup
 AppVersion={#AppVersion}
 AppPublisher=Frank Tzanabetis
 AppPublisherURL=https://plasticcheese.com/
+AppCopyright=Copyright (c) 2026 Frank Tzanabetis
 VersionInfoVersion={#NumericVersion}
 DefaultDirName={localappdata}\Programs\KMSwitcher Setup
 DefaultGroupName=KMSwitcher Setup

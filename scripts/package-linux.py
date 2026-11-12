@@ -83,7 +83,7 @@ def package(app, identity, output):
         (top / name).mkdir(parents=True)
     spec = top / "SPECS/kmswitcher.spec"
     spec.write_text(f"Name: kmswitcher\nVersion: {identity['rpm_version']}\nRelease: {identity['rpm_release']}\n"
-        "Summary: KMSwitcher Companion\nLicense: Unspecified\nURL: https://plasticcheese.com/\nBuildArch: x86_64\n"
+        "Summary: KMSwitcher Companion\nLicense: MIT and bundled third-party licenses\nURL: https://plasticcheese.com/\nPackager: Frank Tzanabetis\nBuildArch: x86_64\n"
         f"AutoReqProv: no\nRequires: {', '.join(RPM_DEPENDENCIES)}\n"
         "%description\nDesktop layout, tray and command-line tools.\n"
         "%install\nmkdir -p %{buildroot}\ncp -a " + str(payload) + "/. %{buildroot}/\n"

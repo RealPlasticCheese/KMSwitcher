@@ -9,17 +9,18 @@ import subprocess
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def identity(base, ref, build_id, commit, component=None):
+def identity(base, ref, build_id, commit, component=None, *, stable=False):
     if not re.fullmatch(r"(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)", base):
         raise ValueError("VERSION must contain MAJOR.MINOR.PATCH")
     if any(int(part) > 65535 for part in base.split(".")):
         raise ValueError("Version exceeds Windows file-version limits")
-    stable = ref.startswith("refs/tags/")
+    tagged = ref.startswith("refs/tags/")
     tag = "refs/tags/" + ((component + "/v") if component else "v") + base
-    if stable and ref != tag:
+    if tagged and ref != tag:
         raise ValueError("Release tag must match the checked-in VERSION exactly")
     if not str(build_id).isdigit() or int(build_id) < 0:
         raise ValueError("Build ID must be a non-negative integer")
+    stable = stable or tagged
     version = base if stable else f"{base}-dev.{build_id}"
     return dict(schema=1, version=version, python_version=base if stable else f"{base}.dev{build_id}",
                 deb_version=base if stable else f"{base}~dev.{build_id}", rpm_version=base,
@@ -37,7 +38,13 @@ def main():
     commit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
     ref = os.environ.get("BUILD_SOURCEBRANCH", "local")
     version_path = ROOT / ("versions/" + args.component + ".txt") if args.component else ROOT / "companion/kms_companion/VERSION"
-    value = identity(version_path.read_text().strip(), ref, os.environ.get("BUILD_BUILDID", "0"), commit, args.component)
+    release_tag = os.environ.get("KMS_GITHUB_RELEASE_TAG", "")
+    if release_tag and (os.environ.get("GITHUB_EVENT_NAME") != "workflow_dispatch"
+                        or os.environ.get("GITHUB_REF") != "refs/heads/main"
+                        or not re.fullmatch(r"v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)", release_tag)):
+        parser.error("Publish a vMAJOR.MINOR.PATCH release by running the GitHub workflow on main")
+    build_id = os.environ.get("BUILD_BUILDID", os.environ.get("GITHUB_RUN_NUMBER", "0"))
+    value = identity(version_path.read_text().strip(), ref, build_id, commit, args.component, stable=bool(release_tag))
     if args.component: value["component"] = args.component
     if value["stable"]:
         # A stable tag may only release a commit already merged to the default branch.

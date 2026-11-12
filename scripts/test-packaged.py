@@ -10,6 +10,16 @@ import uuid
 
 def check(app):
     identity = json.loads((app / "release.json").read_text())
+    if not (app / "LICENSE").is_file() or not (app / "THIRD-PARTY-NOTICES.md").is_file():
+        raise ValueError("Packaged license and third-party notices are required")
+    notice_path = app / "third-party-notices"
+    inventory = json.loads((notice_path / "inventory.json").read_text(encoding="utf-8"))
+    names = {name.lower().replace("_", "-"): name for name in inventory}
+    if not {"pyside6-essentials", "shiboken6"} <= names.keys():
+        raise ValueError("Packaged Qt notices are incomplete")
+    notices = ("Python-LICENSE.txt", "Qt/LGPL-3.0-only.txt", "Qt/GPL-3.0-only.txt")
+    if any(not (notice_path / name).is_file() for name in notices):
+        raise ValueError("Packaged Python or Qt license texts are missing")
     product = identity.get("product", "companion")
     if (app / "firmware").exists() or (app / "KMSwitcher.html").exists():
         raise ValueError("Applications must not embed firmware or the web console")
@@ -52,8 +62,6 @@ def check(app):
         desktop = json.loads(subprocess.check_output([str(executable), "--json", "desktop"], text=True, timeout=30))
         if not desktop["screens"]:
             raise ValueError("Packaged X11 backend did not discover a monitor")
-    if not (app / "third-party-notices/inventory.json").exists():
-        raise ValueError("Third-party notices are missing")
     print("PASS: packaged CLI, release identity, HID discovery and companion UI without embedded firmware")
 
 
@@ -79,8 +87,6 @@ def check_maintenance(app, identity, product):
         if product == "stress":
             subprocess.run([str(app / "kms-stress"), "--demo", "--profile", str(Path(temporary) / "unused-profile.json"), "--output", str(Path(temporary) / "reports")],
                 env=environment, check=True, timeout=30)
-    if not (app / "third-party-notices/inventory.json").exists():
-        raise ValueError("Third-party notices are missing")
     print("PASS: independent " + product + " launchers, external firmware selection and GUI")
 
 

@@ -15,6 +15,8 @@ from . import config_directory
 from .firmware import Bundle
 
 MAX_DOWNLOAD = 128 * 1024 * 1024
+PUBLIC_RELEASES = "https://github.com/RealPlasticCheese/KMSwitcher/releases"
+PUBLIC_INDEX = PUBLIC_RELEASES + "/latest/download/release-index.json"
 
 
 def https_url(url):
@@ -30,11 +32,11 @@ def fetch(url, limit=MAX_DOWNLOAD):
         with urlopen(request, timeout=30) as response:
             https_url(response.geturl())
             if "text/html" in response.headers.get("Content-Type", ""):
-                raise RuntimeError("This release source requires browser sign-in. Open private Azure releases, download the firmware ZIP, and import it here.")
+                raise RuntimeError("This release source requires browser sign-in. Open the release in your browser, download the firmware ZIP, and import it here.")
             data = response.read(limit + 1)
     except HTTPError as error:
         if error.code in (401, 403):
-            raise RuntimeError("This release source requires browser sign-in. Open private Azure releases, download the firmware ZIP, and import it here.") from error
+            raise RuntimeError("This release source requires browser sign-in. Open the release in your browser, download the firmware ZIP, and import it here.") from error
         raise
     if len(data) > limit:
         raise ValueError("Release download exceeds the size limit")
@@ -133,7 +135,7 @@ def download(release, product):
 
 
 def default_source():
-    """Build-time Azure coordinates contain no credentials; users can set a public index."""
+    """Use the public firmware index unless the build configured a private source."""
     from .firmware import default_bundle
     path = default_bundle().parent / "release-source.json"
-    return json.loads(path.read_text()) if path.exists() else None
+    return json.loads(path.read_text()) if path.exists() else PUBLIC_INDEX

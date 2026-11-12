@@ -1,6 +1,8 @@
 # Install KMSwitcher and set up devices
 
-Build from the [public source instructions](build-and-release.md). Packaged releases will be published separately. The following instructions apply to generated packages and firmware bundles.
+Download packages and firmware from [GitHub Releases](https://github.com/RealPlasticCheese/KMSwitcher/releases), or [build from source](build-and-release.md).
+
+KMSwitcher is developed by [Frank Tzanabetis](https://plasticcheese.com/).
 
 | Download | Purpose |
 | --- | --- |
@@ -78,11 +80,9 @@ Import a firmware bundle built from the matching source revision.
 Regular and stress bundles are checked separately.
 Compatible firmware-only updates do not require an application reinstall.
 
-For optional public hosting, copy the firmware artifact contents, including `release-index.json` and its ZIP,
-together to HTTPS hosting, then enter that index address once in **Get updates**.
-**Check for updates** lists releases; **Download selected firmware** verifies and
-imports the bundle. Stable releases are the default. Development builds require
-an explicit choice. Publish public files only from a successful complete release.
+**Check for updates** uses the latest GitHub release. Choose a release and click
+**Download selected firmware** to verify and import the bundle. You can enter
+another HTTPS release index if you use your own firmware feed.
 
 ## Separate Stress Toolkit
 

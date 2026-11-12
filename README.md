@@ -2,7 +2,8 @@
 
 By [Frank Tzanabetis](https://plasticcheese.com).
 
-KMSwitcher is available as source. Start with [building](docs/build-and-release.md),
+Download installers and firmware from [GitHub Releases](https://github.com/RealPlasticCheese/KMSwitcher/releases).
+Start with [building](docs/build-and-release.md),
 [installation and guided firmware setup](docs/installing.md), and [flashing and pairing](docs/flashing-and-pairing.md).
 
 Original KMSwitcher code and artwork use the [MIT License](LICENSE).

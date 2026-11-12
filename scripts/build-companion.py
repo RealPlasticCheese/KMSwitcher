@@ -39,14 +39,29 @@ def notices(destination, product="companion"):
             requirement = Requirement(spec)
             if requirement.marker is None or requirement.marker.evaluate({"extra": ""}):
                 pending.append(requirement.name)
-    python_license = Path(sys.base_prefix) / "LICENSE.txt"
-    if not python_license.exists():
-        python_license = Path(sys.base_prefix) / f"lib/python{sys.version_info.major}.{sys.version_info.minor}/LICENSE.txt"
-    if python_license.exists():
-        shutil.copy2(python_license, destination / "Python-LICENSE.txt")
-    (destination / "inventory.json").write_text(json.dumps(inventory, indent=2) + "\n")
-    (destination / "README.txt").write_text("Third-party package names, versions and licenses are listed in inventory.json.\n"
-        "Bundled license texts are in the package folders. Qt shared libraries remain replaceable.\n", encoding="utf-8")
+    python_version = f"python{sys.version_info.major}.{sys.version_info.minor}"
+    prefix = Path(sys.base_prefix)
+    for candidate in (prefix / "LICENSE.txt", prefix / "lib" / python_version / "LICENSE.txt",
+                      prefix / "share/doc" / f"lib{python_version}-stdlib" / "copyright"):
+        if candidate.is_file():
+            shutil.copy2(candidate, destination / "Python-LICENSE.txt")
+            break
+
+    qt = metadata.version("PySide6-Essentials")
+    qt_minor = ".".join(qt.split(".")[:2])
+    qt_source = f"https://download.qt.io/official_releases/qt/{qt_minor}/{qt}/single/qt-everywhere-src-{qt}.tar.xz"
+    pyside_source = ("https://download.qt.io/official_releases/QtForPython/pyside6/"
+                     f"PySide6-{qt}-src/pyside-setup-everywhere-src-{qt}.tar.xz")
+    shutil.copytree(ROOT / "packaging/qt-notices", destination / "Qt", dirs_exist_ok=True)
+    (destination / "inventory.json").write_text(json.dumps(inventory, indent=2) + "\n", encoding="utf-8")
+    source = (f"Qt {qt} source\n{qt_source}\n\nPySide6 {qt} source\n{pyside_source}\n")
+    if product != "companion":
+        source += ("\nesptool corresponding source is included with the matching GitHub release.\n"
+                   "https://github.com/RealPlasticCheese/KMSwitcher/releases\n")
+    (destination / "README.txt").write_text(
+        "Third-party package names, versions and licenses are listed in inventory.json.\n"
+        "Qt and PySide6 are redistributed under LGPL-3.0. Their shared libraries remain replaceable.\n"
+        "See the Qt folder for the LGPL and GPL license texts.\n\n" + source, encoding="utf-8")
 
 
 
@@ -83,7 +98,7 @@ def build(identity, output, product="companion"):
         version_file = source / "windows-version.txt"
         version_file.write_text("VSVersionInfo(ffi=FixedFileInfo(filevers=" + repr(numbers) + ", prodvers=" + repr(numbers) +
             ", mask=0x3f, flags=0, OS=0x40004, fileType=1, subtype=0, date=(0,0)), "
-            "kids=[StringFileInfo([StringTable('040904B0', [StringStruct('ProductName', 'KMSwitcher'), "
+            "kids=[StringFileInfo([StringTable('040904B0', [StringStruct('ProductName', 'KMSwitcher'), StringStruct('CompanyName', 'Frank Tzanabetis'), StringStruct('Comments', 'https://plasticcheese.com/'), "
             f"StringStruct('ProductVersion', {identity['version']!r}), StringStruct('FileVersion', {identity['version']!r})" +
             "])]), VarFileInfo([VarStruct('Translation', [1033,1200])])])")
         environment["KMS_WINDOWS_VERSION_FILE"] = str(version_file)
