@@ -13,7 +13,8 @@ if (Test-Path -LiteralPath $uninstallKey) { throw 'A real installation exists in
 New-Item -ItemType Directory -Force -Path $testRoot | Out-Null
 $publisher = 'Frank Tzanabetis'
 $website = 'https://plasticcheese.com/'
-if ((Get-Item -LiteralPath $Installer).VersionInfo.CompanyName -ne $publisher) {
+$installerPublisher = (Get-Item -LiteralPath $Installer).VersionInfo.CompanyName
+if ($installerPublisher.Trim() -ne $publisher) {
     throw 'Installer publisher metadata is missing.'
 }
 $originalLocalData = $env:LOCALAPPDATA
