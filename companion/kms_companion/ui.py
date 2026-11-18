@@ -101,6 +101,9 @@ def launch(*, execute=True, tray_only=False):
             self.edit_generation = 0
             self.deferred_peers = None
             self.clipboard_state = {}
+            self.clipboard_paused = False
+            self.clipboard_pause_pending = False
+            self.clipboard_pause_generation = 0
             self.clipboard_applied = set()
             self.clipboard_processing = set()
             self.clipboard_notified = {}
@@ -280,6 +283,11 @@ def launch(*, execute=True, tray_only=False):
                 self.send_actions[slot] = action
             menu.addSeparator()
             self.incoming_action = menu.addAction("Clipboard transfers…", self.show_transfers)
+            pause_checkbox = self.clipboard_panel.disable_automatic_transfers
+            self.clipboard_pause_action = menu.addAction(pause_checkbox.text())
+            self.clipboard_pause_action.setCheckable(True)
+            self.clipboard_pause_action.triggered.connect(self.set_clipboard_paused)
+            pause_checkbox.clicked.connect(self.set_clipboard_paused)
             menu.addSeparator()
             menu.aboutToShow.connect(lambda: self.submit("clipboard-status", callback=self.show_clipboard_status, ui=True))
             self.tray_enabled = QAction("Enable automatic switching", self)
@@ -390,6 +398,8 @@ def launch(*, execute=True, tray_only=False):
                 identifier = getattr(future, "clipboard_id", None)
                 if identifier is not None:
                     self.clipboard_processing.discard(identifier)
+                if future.cancelled():
+                    continue
                 try:
                     result = future.result()
                     if callback:
@@ -478,9 +488,38 @@ def launch(*, execute=True, tray_only=False):
                 self.show_tray_message("Clipboard not sent", str(error))
                 self.note.setText(str(error))
 
+        def update_clipboard_pause(self, disabled):
+            if disabled and not self.clipboard_paused:
+                self.clipboard_pause_generation += 1
+                self.clipboard_auto_timer.stop()
+                for future, _ in self.pending:
+                    if getattr(future, "clipboard_automatic_save", False) is True:
+                        future.cancel()
+            self.clipboard_paused = disabled
+            for control in (self.clipboard_pause_action, self.clipboard_panel.disable_automatic_transfers):
+                control.setChecked(disabled)
+                control.setEnabled(not self.clipboard_pause_pending)
+
+        def set_clipboard_paused(self, disabled):
+            self.clipboard_pause_pending = True
+            self.update_clipboard_pause(self.clipboard_paused or disabled)
+
+            def saved(state):
+                self.clipboard_pause_pending = False
+                self.show_clipboard_status(state)
+
+            def failed(error):
+                self.clipboard_pause_pending = False
+                self.update_clipboard_pause(self.clipboard_paused)
+                self.show_tray_message("Clipboard transfer setting could not be saved", str(error))
+
+            future = self.submit("clipboard-auto-disable", disabled=disabled, callback=saved)
+            future.kms_error = failed
+
         def clipboard_changed(self):
             settings = self.clipboard_state.get("settings", {})
-            if not self.quitting and any(mode != "off" for mode in automatic_modes(settings).values()):
+            if not self.quitting and not self.clipboard_paused and any(
+                    mode != "off" for mode in automatic_modes(settings).values()):
                 self.clipboard_auto_timer.start()
 
         def send_automatic_clipboard(self):
@@ -489,7 +528,7 @@ def launch(*, execute=True, tray_only=False):
             settings = self.clipboard_state.get("settings", {})
             session = self.clipboard_state.get("ready_session")
             enabled_types = {kind for kind, mode in automatic_modes(settings).items() if mode != "off"}
-            if self.quitting or not session or not enabled_types:
+            if self.quitting or self.clipboard_paused or not session or not enabled_types:
                 return
             if not self.transfer_clear_button.isEnabled() or any(
                     future.kms_command == "clipboard-auto-send" for future, _ in self.pending):
@@ -527,6 +566,8 @@ def launch(*, execute=True, tray_only=False):
         def show_clipboard_status(self, state):
             from .clipboard_preferences import DEFAULT_RECEIVING
             self.clipboard_state = state
+            if not self.clipboard_pause_pending:
+                self.update_clipboard_pause(state.get("automatic_transfers_disabled", False))
             settings = state.get("settings", {})
             if settings.get("name") and not self.clipboard_panel.loaded and not self.clipboard_panel.dirty:
                 self.clipboard_panel.load(settings)
@@ -551,10 +592,14 @@ def launch(*, execute=True, tray_only=False):
                 identifier = item["id"]
                 kind = item.get("content_type", item.get("kind"))
                 behaviour = settings.get("receiving", {}).get(kind, DEFAULT_RECEIVING.get(kind, "manual"))
+                if self.clipboard_paused or item.get("manual_acceptance"):
+                    behaviour = "manual"
+                    if item.get("direction") == "receive" and item.get("state") == "Ready":
+                        self.clipboard_applied.add(identifier)
                 automatic = (item.get("direction") == "receive" and item.get("state") == "Ready" and
                              identifier not in self.clipboard_applied and identifier not in self.clipboard_processing)
                 if automatic and behaviour == "clipboard":
-                    self.accept_clipboard(identifier)
+                    self.accept_clipboard(identifier, automatic=True)
                 elif automatic and behaviour == "save":
                     self.clipboard_applied.add(identifier)
                     self.save_received_files(identifier, parent=settings.get("save_folder"), automatic=True)
@@ -568,13 +613,16 @@ def launch(*, execute=True, tray_only=False):
             self.clipboard_notified = {item["id"]: item["state"] for item in items}
             self.refresh_transfers()
 
-        def accept_clipboard(self, identifier):
+        def accept_clipboard(self, identifier, *, automatic=False):
             if identifier in self.clipboard_processing:
                 return
             from .clipboard_ui import publish_clipboard
             self.clipboard_applied.add(identifier)
             self.clipboard_processing.add(identifier)
+            generation = self.clipboard_pause_generation
             def apply(content):
+                if automatic and generation != self.clipboard_pause_generation:
+                    return
                 publish_clipboard(app.clipboard(), content)
                 self.submit("clipboard-applied", id=identifier)
                 self.note.setText("Received content is ready for normal Paste")
@@ -780,6 +828,8 @@ def launch(*, execute=True, tray_only=False):
             if parent:
                 self.clipboard_processing.add(identifier)
                 def saved(result):
+                    if not result:
+                        return
                     path = result["path"]
                     self.note.setText("Saved to " + path)
                     for item in self.clipboard_state.get("items", []):
@@ -794,6 +844,7 @@ def launch(*, execute=True, tray_only=False):
                             callback=saved, **({"automatic": True} if automatic else {}))
                 if future is not None:
                     future.clipboard_id = identifier
+                    future.clipboard_automatic_save = automatic
 
         def open_saved_location(self, path):
             from .file_manager import reveal_path

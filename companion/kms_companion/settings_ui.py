@@ -19,6 +19,12 @@ class ClipboardSettings(QWidget):
         self.loaded = self.dirty = False
         form = QFormLayout(self)
         form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
+        self.disable_automatic_transfers = QCheckBox("Disable all automatic clipboard transfers")
+        form.addRow(self.disable_automatic_transfers)
+        pause_hint = QLabel("Turn on before copying passwords or other sensitive content to keep it from being sent automatically. "
+                            "Incoming items wait in Transfers, and you can still send manually. Applies immediately on this computer.")
+        pause_hint.setWordWrap(True)
+        form.addRow(pause_hint)
         self.name = QLineEdit(socket.gethostname())
         self.mode, self.speed = QComboBox(), QComboBox()
         for value, label in zip(MODES, MODE_LABELS):

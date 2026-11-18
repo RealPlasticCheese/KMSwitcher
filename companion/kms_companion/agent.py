@@ -165,6 +165,8 @@ class Agent:
             return self.clipboard.status(ui=bool(args.get("ui")))
         if command == "clipboard-settings":
             return self.clipboard.configure(args["settings"])
+        if command == "clipboard-auto-disable":
+            return self.clipboard.set_automatic_transfers_disabled(args["disabled"] is True)
         if command == "clipboard-send":
             return self.clipboard.send(args["slot"], args["capture"])
         if command == "clipboard-auto-send":
