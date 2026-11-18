@@ -7,6 +7,18 @@ the name identifies the computer currently attached there. You can also choose a
 destination from **Send clipboard** on the **Transfers** tab in Settings.
 Unavailable destinations are disabled.
 
+## Pause automatic clipboard transfers
+
+Check **Disable all automatic clipboard transfers** in the tray menu or in
+**Settings → Clipboard** before copying a password or other sensitive content.
+It takes effect immediately on this computer and stays checked until you turn
+it off. You can still send manually and accept incoming items from **Transfers**.
+
+Enabling the pause discards queued automatic sends. A send already in progress
+can finish. Copies made while paused are skipped, and automatic sending resumes
+with the next copy after you uncheck the option. Incoming items received while
+paused stay available for manual acceptance or saving.
+
 ## Send automatically when you copy
 
 In **Settings → Clipboard**, use the **Send automatically** dropdown for each

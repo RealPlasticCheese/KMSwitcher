@@ -207,7 +207,8 @@ class LayoutUiTests(unittest.TestCase):
         items = [dict(id=i + 100, direction="receive", state="Ready", content_type=kind,
                       kind="files" if kind == "files" else "content") for i, kind in enumerate(kinds)]
         state = dict(items=items, settings=dict(receiving=DEFAULT_RECEIVING))
-        def accept(identifier):
+        def accept(identifier, *, automatic):
+            self.assertTrue(automatic)
             self.window.clipboard_applied.add(identifier)
         with patch.object(self.window, "accept_clipboard", side_effect=accept) as publish, \
              patch.object(self.window, "save_received_files") as save:
@@ -394,6 +395,60 @@ class LayoutUiTests(unittest.TestCase):
             self.assertEqual(args["source_session"], 123)
             self.assertEqual((Path(args["capture"]).parent / "format-0").read_text(), "send from clipboard change")
         self.window.clipboard_auto_timer.stop()
+
+    def test_automatic_clipboard_pause_syncs_controls_and_ignores_copies(self):
+        action = self.window.clipboard_pause_action
+        checkbox = self.window.clipboard_panel.disable_automatic_transfers
+        self.assertEqual(action.text(), "Disable all automatic clipboard transfers")
+        self.assertEqual(checkbox.text(), action.text())
+        settings = dict(automatic_send={"text": "all"}, receiving={"text": "clipboard", "rich": "save"},
+                        save_folder=self.directory.name, max_mb=256)
+        state = dict(settings=settings, ready_session=123, items=[])
+
+        def call(command, **args):
+            if command == "clipboard-auto-disable":
+                state["automatic_transfers_disabled"] = args["disabled"]
+                return copy.deepcopy(state)
+            if command == "clipboard-status":
+                return copy.deepcopy(state)
+            return self.call(command, **args)
+
+        with patch("kms_companion.ipc.call", side_effect=call), \
+             patch("kms_companion.clipboard_ui.capture_clipboard", return_value="capture.json") as capture:
+            self.window.show_clipboard_status(state)
+            self.app.clipboard().setText("copy waiting on the debounce timer")
+            self.assertTrue(self.window.clipboard_auto_timer.isActive())
+            action.trigger()
+            self.assertTrue(checkbox.isChecked())
+            self.assertFalse(self.window.clipboard_auto_timer.isActive())
+            self.app.clipboard().setText("sensitive text copied while disabled")
+            self.window.send_automatic_clipboard()
+            self.assertFalse(self.window.clipboard_auto_timer.isActive())
+            capture.assert_not_called()
+            self.drain()
+
+            state["items"] = [dict(id=1, direction="receive", state="Ready", content_type="text"),
+                              dict(id=2, direction="receive", state="Ready", content_type="rich")]
+            self.window.show_clipboard_status(state)
+            self.window.send_clipboard(2)
+            self.drain()
+            self.assertIn(("clipboard-send", dict(slot=2, capture="capture.json")), self.calls)
+            capture.reset_mock()
+            checkbox.click()
+            self.drain()
+            self.assertFalse(action.isChecked())
+            self.assertFalse(checkbox.isChecked())
+            self.assertFalse(self.window.clipboard_panel.dirty)
+            self.assertFalse(self.window.clipboard_auto_timer.isActive())
+            self.assertFalse(any(command in ("clipboard-content", "clipboard-save") for command, _ in self.calls))
+            capture.assert_not_called()
+
+            self.app.clipboard().setText("new copy after resuming")
+            self.assertTrue(self.window.clipboard_auto_timer.isActive())
+            self.window.clipboard_auto_timer.stop()
+            self.window.send_automatic_clipboard()
+            self.drain()
+            self.assertIn(("clipboard-auto-send", dict(capture="capture.json", source_session=123)), self.calls)
 
     def test_per_type_automatic_modes_and_compact_destination_checkboxes(self):
         from PySide6.QtWidgets import QCheckBox, QLabel

@@ -53,8 +53,11 @@ class TransferService:
         self.settings = {"mode": "network-preferred", "name": socket.gethostname(), "max_mb": 256, "speed": "conservative"}
         self.settings.update(receiving_settings({}))
         self.settings.update(sending_settings({}))
+        self.automatic_transfers_disabled = False
         try:
-            self.settings.update(self.validate_settings(json.loads(self.settings_file.read_text(encoding="utf-8"))))
+            stored = json.loads(self.settings_file.read_text(encoding="utf-8"))
+            self.settings.update(self.validate_settings(stored))
+            self.automatic_transfers_disabled = stored.get("automatic_transfers_disabled") is True
         except (OSError, ValueError, TypeError):
             pass
         self.stop = threading.Event()
@@ -119,9 +122,7 @@ class TransferService:
         settings = self.validate_settings(settings)
         discarded = None
         with self.automatic_lock:
-            temp = self.settings_file.with_suffix(".tmp")
-            temp.write_text(json.dumps(settings), encoding="utf-8")
-            temp.replace(self.settings_file)
+            self._save_settings(settings, self.automatic_transfers_disabled)
             if any(settings[key] != self.settings[key] for key in ("automatic_send", "automatic_targets", "mode")):
                 self.automatic_generation += 1
                 discarded, self.pending_copy = self.pending_copy, None
@@ -130,6 +131,24 @@ class TransferService:
             shutil.rmtree(discarded.capture.parent, ignore_errors=True)
         self.next_scan = 0
         return dict(settings)
+
+    def _save_settings(self, settings, automatic_transfers_disabled):
+        temp = self.settings_file.with_suffix(".tmp")
+        temp.write_text(json.dumps(dict(settings, automatic_transfers_disabled=automatic_transfers_disabled)),
+                        encoding="utf-8")
+        temp.replace(self.settings_file)
+
+    def set_automatic_transfers_disabled(self, disabled):
+        discarded = None
+        with self.automatic_lock:
+            if disabled != self.automatic_transfers_disabled:
+                self._save_settings(self.settings, disabled)
+                self.automatic_transfers_disabled = disabled
+                self.automatic_generation += 1
+                discarded, self.pending_copy = self.pending_copy, None
+        if discarded:
+            shutil.rmtree(discarded.capture.parent, ignore_errors=True)
+        return self.status()
 
     def start(self):
         # Start is called after acquiring the helper's exclusive instance lock.
@@ -410,6 +429,7 @@ class TransferService:
         with self.status_lock:
             items = [dict(i) for i in self.items.values()]
         return dict(settings=dict(self.settings), peers=peers, items=items, supported=bool(self.slot),
+                    automatic_transfers_disabled=self.automatic_transfers_disabled,
                     ready_session=self.session if self.ready() else 0,
                     network_error=self.network_error, stream=dict(self.stream_state))
 
@@ -464,7 +484,7 @@ class TransferService:
             kind = content_type(dict(roots=descriptor["files"], formats=descriptor["formats"]))
             with self.automatic_lock:
                 mode = self.settings["automatic_send"][kind]
-                if mode == "off" or source_session != self.session or not self.ready():
+                if self.automatic_transfers_disabled or mode == "off" or source_session != self.session or not self.ready():
                     return {"queued": False}
                 targets = {}
                 for peer in self.status()["peers"]:
@@ -629,6 +649,8 @@ class TransferService:
 
     def save(self, identifier, parent, automatic=False):
         with self.lock:
+            if automatic and self.automatic_transfers_disabled:
+                return {}
             content = self.content(identifier, publish=False)
             if content["manifest"]["roots"]:
                 path = save_files(content["directory"], content["manifest"], parent, f"KMSwitcher-{identifier:08x}")
@@ -788,6 +810,7 @@ class TransferService:
                         shutil.rmtree(content)
                         raise ValueError("Destination session changed while validating the clipboard")
                     incoming["manifest"] = manifest
+                    incoming["manual_acceptance"] = self.automatic_transfers_disabled
                 elif p.kind not in (Kind.BEGIN, Kind.DATA, Kind.END):
                     raise ValueError("Unexpected clipboard operation")
                 # A successful retry must replace an earlier packet's failure state.
@@ -796,6 +819,7 @@ class TransferService:
                 self._item(incoming["id"], direction="receive", slot=p.source, name=peer[1].name,
                            state=state, size=incoming["size"], kind=manifest["kind"] if manifest else None,
                            content_type=content_type(manifest) if manifest else None,
+                           manual_acceptance=incoming.get("manual_acceptance", False),
                            available=bool(manifest and incoming.get("retained", True)),
                            progress=incoming["offset"], transport=transport, detail="")
                 return p.reply(Kind.ACK, offset=incoming["offset"])
@@ -878,7 +902,8 @@ class TransferService:
             shutil.rmtree(capture.parent, ignore_errors=True)
 
     def _automatic_current(self, copy):
-        return copy.generation == self.automatic_generation and copy.session == self.session and self.ready()
+        return (not self.automatic_transfers_disabled and copy.generation == self.automatic_generation and
+                copy.session == self.session and self.ready())
 
     def _send_automatic_copy(self, copy):
         def current():

@@ -224,6 +224,50 @@ class ServiceTests(unittest.TestCase):
                 self.assertEqual(self.a.send_automatic(capture, 101)["queued"], expected)
                 self.assertFalse(folder.exists())
 
+    def test_automatic_pause_discards_queued_copies_and_preserves_send_settings(self):
+        self.b.machine_id = b"b" * 16
+        self.a.peers[2] = (202, self.b.advertisement(1, 101, True), time.monotonic())
+        settings = self.a.configure(dict(self.a.settings, automatic_send=dict(text="all")))
+
+        def capture(name):
+            folder = self.a.root / "outgoing" / name
+            folder.mkdir()
+            descriptor = folder / "capture.json"
+            descriptor.write_text(json.dumps(dict(formats={"text/plain": "plain"}, files=[])), encoding="utf-8")
+            return descriptor
+
+        self.assertTrue(self.a.send_automatic(capture("queued"), 101)["queued"])
+        queued = self.a.pending_copy
+        self.assertTrue(self.a.set_automatic_transfers_disabled(True)["automatic_transfers_disabled"])
+        self.assertIsNone(self.a.pending_copy)
+        self.assertFalse(queued.capture.exists())
+        blocked = capture("blocked")
+        self.assertFalse(self.a.send_automatic(blocked, 101)["queued"])
+        self.assertFalse(blocked.exists())
+        self.assertIn("id", self.a.send(2, capture("manual")))
+
+        settings = self.a.configure(dict(settings, name="New name"))
+        reopened = TransferService(self.a.root.parent)
+        self.assertTrue(reopened.status()["automatic_transfers_disabled"])
+        self.assertEqual(reopened.settings, settings)
+
+        self.assertFalse(self.a.set_automatic_transfers_disabled(False)["automatic_transfers_disabled"])
+        self.assertFalse(self.a._automatic_current(queued))
+        self.assertTrue(self.a.send_automatic(capture("resumed"), 101)["queued"])
+
+    def test_receives_completed_during_pause_remain_available_for_manual_actions(self):
+        self.b.set_automatic_transfers_disabled(True)
+        self.a._stream(self.base, self.bundle, self.request, 160)
+        item, = self.b.status()["items"]
+        self.assertEqual(item["state"], "Ready")
+        self.assertTrue(item["manual_acceptance"])
+        self.assertEqual(self.b.save(item["id"], self.root, automatic=True), {})
+        self.b.set_automatic_transfers_disabled(False)
+        self.request(replace(self.base, kind=Kind.END, data=b""))
+        item, = self.b.status()["items"]
+        self.assertTrue(item["manual_acceptance"])
+        self.assertTrue(Path(self.b.save(item["id"], self.root)["path"]).is_file())
+
     def test_duplicate_chunks_and_repeated_commit_are_idempotent(self):
         self.request(self.base)
         chunk = replace(self.base, kind=Kind.DATA, data=self.bundle.read_bytes())
